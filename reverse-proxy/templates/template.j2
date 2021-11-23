@@ -1,0 +1,48 @@
+load_module /usr/lib/nginx/modules/ndk_http_module.so;
+load_module /usr/lib/nginx/modules/ngx_http_lua_module.so;
+pcre_jit on;
+ 
+worker_processes 1;
+daemon off;
+  
+events { worker_connections 1024; }
+
+http {
+    upstream hasura {
+        server {{ hasura_ip }}:{{ hasura_port }};
+    }
+
+    server {
+        listen 80;
+        root /app/manager/;
+
+        location /hasura/ {
+            proxy_pass         http://hasura/;
+            proxy_redirect     off;
+        }
+
+        location {{ endpoint }}/ {
+            proxy_pass         http://hasura/v1/graphql/;
+            proxy_redirect     off;
+        }
+        
+        location /graphql/ {
+            proxy_pass         http://hasura/v1/graphql/;
+            proxy_redirect     off;
+        }
+
+        location /help.txt {
+            alias /app/manager/examples/help.txt;
+        }
+
+        location /help/schema.txt {
+            alias /app/manager/examples/schema.txt;
+        }
+{% for chain in chains %}
+        location /help/{{ chain.name }}_{{ chain.event }}.txt {
+            alias /app/manager/examples/{{ chain.name }}_{{ chain.event }}.txt;
+            autoindex off;
+        }
+{% endfor %}
+    }
+}

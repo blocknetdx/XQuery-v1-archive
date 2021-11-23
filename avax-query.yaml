@@ -1,0 +1,16 @@
+
+# Single chain - AVAX
+graph: AVAX
+endpoint: /singlechainAVAX
+chains:
+  - name: AVAX
+    host: https://api.avax.network/ext/bc/C/rpc
+    port: 
+    abi: avax_abi.json
+    query:
+    - name: Swap
+    address:
+    - name: Pangolin_Router
+      address: '0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106'
+    historical:
+    - fromBlock: "6800000"

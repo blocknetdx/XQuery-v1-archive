@@ -1,0 +1,8 @@
+PyYAML
+Jinja2
+requests
+ujson
+pyzmq
+pony
+rusty-rlp==0.1.15
+web3==5.24.0

@@ -1,0 +1,44 @@
+from pony.orm import *
+from db import db
+import http.client
+import json
+import os
+
+{% for class in classes %}
+
+class {{ class.name }}(db.Entity):
+  {% for attrib in class.attributes %}
+  {{ attrib.name }} = {{ attrib.value | replace("lambda","lambda:") }}
+  {% endfor %}
+
+{% endfor %}
+
+db.generate_mapping(create_tables=True)
+
+hasura_host = str(os.environ.get('HASURA_HOST','localhost'))
+hasura_port = int(os.environ.get('HASURA_PORT', 8080))
+
+conn = http.client.HTTPConnection(hasura_host, hasura_port)
+payload = json.dumps({
+  "type": "bulk",
+  "args": [
+
+{% for class in classes %}
+    {
+      "type": "track_table",
+      "args": {
+        "schema": "public",
+        "name": "{{ class.name.lower() }}"
+      }
+    },
+{% endfor %}
+  ]
+})
+headers = {
+  'Content-Type': 'application/json',
+  'X-Hasura-Role': 'admin'
+}
+conn.request("POST", "/v1/query", payload, headers)
+res = conn.getresponse()
+data = res.read()
+print(data.decode("utf-8"))

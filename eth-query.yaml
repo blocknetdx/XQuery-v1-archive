@@ -1,0 +1,17 @@
+#Single chain - ETH - infura
+graph: ETH_infura
+endpoint: /singlechainETH
+chains:
+  - name: ETH
+    host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
+    port: 
+    abi: eth_abi.json
+    query:
+    - name: Swap
+    address:
+    - name: Uniswap_Router_v2
+      address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
+    - name: Uniswap_Router_v3
+      address: '0xe592427a0aece92de3edee1f18e0157c05861564'
+    historical:
+    - fromBlock: "13600000"

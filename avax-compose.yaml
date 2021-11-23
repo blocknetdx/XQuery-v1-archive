@@ -1,0 +1,132 @@
+version: '3.6'
+services:
+
+####avax STACK START
+  trade-processor-avax:
+    build: ./trade-processor
+    depends_on:
+      - "graphql-engine"
+      - "gateway-processor"
+      - "db-processor"
+    restart: always
+    environment:
+      NAME: AVAX
+      WORKER_THREADS: 30
+      CHAIN_HOST: https://api.avax.network/ext/bc/C/rpc
+      CHAIN_PORT: None
+      DB_HOST: 172.31.0.3
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgrespassword
+      DB_DATABASE: postgres
+      ZMQ_GATEWAY_HOST: 172.31.0.4
+      ZMQ_GATEWAY_PORT1: 5555
+      ZMQ_GATEWAY_PORT2: 5556
+    volumes:
+      - ${PWD}/avax_abi.json:/app/manager/abi.json
+      - ${PWD}/avax-query.yaml:/app/manager/query.yaml
+    networks:
+      avax:
+        ipv4_address: 172.31.0.2
+####avax STACK END
+
+  gateway-processor:
+    build: ./gateway-processor
+    depends_on:
+      - "postgres"
+    restart: always
+    environment:
+      DB_HOST: 172.31.0.3
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgrespassword
+      DB_DATABASE: postgres
+      ZMQ_GATEWAY_PORT1: 5555
+      ZMQ_GATEWAY_PORT2: 5556
+    ports:
+      - "5555:5555"
+      - "5556:5556"
+    networks:
+      avax:
+        ipv4_address: 172.31.0.4
+  db-processor:
+    build: ./db-processor
+    depends_on:
+      - "postgres"
+    restart: always
+    environment:
+      ZMQ_GATEWAY_HOST: 172.31.0.4
+      ZMQ_GATEWAT_PORT1: 5555
+      ZMQ_GATEWAT_PORT2: 5556
+      DB_HOST: 172.31.0.3
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgrespassword
+      DB_DATABASE: postgres
+      HASURA_HOST: 172.31.0.6
+      HASURA_PORT: 8080
+      CHAIN_ABI_AVAX: avax_abi.json
+    volumes:
+      - ${PWD}/avax_abi.json:/app/manager/avax_abi.json
+    networks:
+      avax:
+        ipv4_address: 172.31.0.5
+  postgres:
+    image: postgres:12
+    restart: always
+    volumes:
+      - avax:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    command: -p 5432
+    networks:
+      avax:
+        ipv4_address: 172.31.0.3
+  graphql-engine:
+    image: hasura/graphql-engine:v2.0.10
+    hostname: graphql-engine
+    ports:
+      - "8080:8080"
+    depends_on:
+      - "postgres"
+    restart: always
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgrespassword@172.31.0.3:5432/postgres
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_SERVER_PORT: 8080
+    networks:
+      avax:
+        ipv4_address: 172.31.0.6
+  reverse-proxy:
+    build: ./reverse-proxy
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      CHAIN_ENDPOINT: /singlechainAVAX
+      CHAIN_HASURA: 172.31.0.6
+      CHAIN_HASURA_PORT: 8080
+      QUERY_CONFIG: avax-query.yaml
+      CHAIN_ABI_AVAX: AVAX.json
+    depends_on:
+      - "trade-processor-avax"
+    volumes:
+      - ${PWD}/avax-query.yaml:/app/manager/query.yaml
+      - ${PWD}/avax_abi.json:/app/manager/AVAX.json
+    networks:
+      avax:
+        ipv4_address: 172.31.0.7
+networks:
+  avax:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.0.0/24
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+volumes:
+  avax:
