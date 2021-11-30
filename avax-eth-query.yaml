@@ -5,7 +5,7 @@ chains:
   - name: AVAX
     host: https://api.avax.network/ext/bc/C/rpc
     port: 
-    abi: avax_abi.json
+    abi: abi/avax.json
     query:
     - name: Swap
     address:
@@ -16,7 +16,7 @@ chains:
   - name: ETH
     host: https://:fa596017058b49ad998047ad81c45662@mainnet.infura.io/v3/4300a3997f8e4f9cbfffeda1f56ffa20
     port: 
-    abi: eth_abi.json
+    abi: abi/eth.json
     query:
     - name: Swap
     address:

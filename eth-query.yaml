@@ -5,7 +5,7 @@ chains:
   - name: ETH
     host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
     port: 
-    abi: eth_abi.json
+    abi: abi/eth.json
     query:
     - name: Swap
     address:

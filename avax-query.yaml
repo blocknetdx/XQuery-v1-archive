@@ -6,7 +6,7 @@ chains:
   - name: AVAX
     host: https://api.avax.network/ext/bc/C/rpc
     port: 
-    abi: avax_abi.json
+    abi: abi/avax.json
     query:
     - name: Swap
     address:
