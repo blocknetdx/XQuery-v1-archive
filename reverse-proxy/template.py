@@ -106,7 +106,6 @@ def help_text(query, data):
 	endpoint = query['endpoint']
 	text = "Hasura console\n\t"+"http://localhost:80/hasura/\n\n"
 	text +="GraphQL endpoint\n\t"+ f"http://localhost:80{endpoint}/\n\n"
-	text +="GraphQL endpoint\n\t"+ f"http://localhost:80/graphql/\n\n"
 	text +="List available endpoints\n\t"+ f"http://localhost:80/help.txt\n\n"
 	text +="GraphQL data types\n\t"+ f"http://localhost:80/help/schema.txt\n\n"
 	for key, item in data.items():

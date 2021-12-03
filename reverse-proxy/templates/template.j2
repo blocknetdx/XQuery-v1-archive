@@ -18,7 +18,7 @@ http {
             proxy_redirect     off;
         }
         
-        location ~ ^/({{ endpoint }}|graphlq/)/ {{
+        location {{ endpoint }} {
             proxy_pass         http://{{ hasura_ip}}:{{hasura_port}}/v1/graphql;
             proxy_redirect     off;
         }
