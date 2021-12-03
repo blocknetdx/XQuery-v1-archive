@@ -8,26 +8,23 @@ daemon off;
 events { worker_connections 1024; }
 
 http {
-    upstream hasura {
-        server {{ hasura_ip }}:{{ hasura_port }};
-    }
 
     server {
         listen 80;
         root /app/manager/;
 
         location /hasura/ {
-            proxy_pass         http://hasura/;
+            proxy_pass         http://{{ hasura_ip}}:{{hasura_port}}/;
             proxy_redirect     off;
         }
 
-        location {{ endpoint }}/ {
-            proxy_pass         http://hasura/v1/graphql/;
+        location {{ endpoint }} {
+            proxy_pass         http://{{ hasura_ip}}:{{hasura_port}}/v1/graphql;
             proxy_redirect     off;
         }
         
-        location /graphql/ {
-            proxy_pass         http://hasura/v1/graphql/;
+        location /graphql {
+            proxy_pass         http://{{ hasura_ip}}:{{hasura_port}}/v1/graphql;
             proxy_redirect     off;
         }
 
