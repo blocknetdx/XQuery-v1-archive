@@ -65,6 +65,7 @@ def gen_data_for_template(abis):
 			hasura_port = env[str.encode(e)].decode('utf-8')
 		elif 'CHAIN_HASURA' in e:
 			hasura_ip = env[str.encode(e)].decode('utf-8')
+	final_data['port'] = os.environ.get('PORT', '80')
 	final_data['endpoint'] = chain_endpoint
 	final_data['hasura_ip'] = hasura_ip
 	final_data['hasura_port'] = hasura_port
@@ -103,15 +104,26 @@ def query_text(data):
 		print(final_text)
 	
 def help_text(query, data):
+	port = os.environ.get('PORT', '80')
 	endpoint = query['endpoint']
-	text = "Hasura console\n\t"+"http://localhost:80/hasura/\n\n"
-	text +="GraphQL endpoint\n\t"+ f"http://localhost:80{endpoint}/\n\n"
-	text +="List available endpoints\n\t"+ f"http://localhost:80/help.txt\n\n"
-	text +="GraphQL data types\n\t"+ f"http://localhost:80/help/schema.txt\n\n"
+	text = "Powered by\n\thttps://blocknet.co\n\thttps://xquery.io\n\n"
+	text +="Current Graph\n\t"+ f"http://localhost:{port}/help/graph\n\n"
+	text +="List available endpoints\n\t"+ f"http://localhost:{port}/help\n\n"
+	text +="GraphQL endpoint\n\t"+ f"http://localhost:{port}{endpoint}/\n\n"
+	text +="GraphQL data types\n\t"+ f"http://localhost:{port}/help/schema\n\n"
 	for key, item in data.items():
 		for k, i in item.items():
-			text +=f"Query example for chain {key} and event {k}\n\t"+ f"http://localhost:80/help/{key}_{k}.txt\n\n"
+			text +=f"Query example for chain {key} and event {k}\n\t"+ f"http://localhost:{port}/help/{key}_{k}\n\n"
 	write_text_file(text, f"examples/help.txt")
+	data = dict(query)
+	for key, item in data.items():
+		if key == 'chains':
+			for i in item:
+				if 'rpc_host' in list(i):
+					del i['rpc_host']
+
+
+	write_json_file(data, f"examples/graph.json")
 	print(text)
 
 if __name__ == "__main__":
@@ -119,7 +131,8 @@ if __name__ == "__main__":
 	_type = os.environ.get('SCHEMA','abi')
 	wd = os.getcwd()
 	data = yaml_from_abi()
-	query = load_yaml_file("query.yaml")
+	query_file = os.environ.get('QUERY_CONFIG','query.yaml')
+	query = load_yaml_file(query_file)
 
 	#load needed data
 	#events with inputs

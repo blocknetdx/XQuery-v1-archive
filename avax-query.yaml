@@ -1,11 +1,10 @@
 
 # Single chain - AVAX
 graph: AVAX
-endpoint: /singlechainAVAX
+endpoint: /xquery
 chains:
   - name: AVAX
-    host: https://api.avax.network/ext/bc/C/rpc
-    port: 
+    rpc_host: https://api.avax.network/ext/bc/C/rpc
     abi: abi/avax.json
     query:
     - name: Swap

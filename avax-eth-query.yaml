@@ -1,10 +1,9 @@
 #Multi chain AVAX - ETH
 graph: AVAX_ETH
-endpoint: /multichainAVAXETH
+endpoint: /xquery
 chains:
   - name: AVAX
-    host: https://api.avax.network/ext/bc/C/rpc
-    port: 
+    rpc_host: https://api.avax.network/ext/bc/C/rpc
     abi: abi/avax.json
     query:
     - name: Swap
@@ -14,8 +13,7 @@ chains:
     historical:
     - fromBlock: "6800000"
   - name: ETH
-    host: https://:fa596017058b49ad998047ad81c45662@mainnet.infura.io/v3/4300a3997f8e4f9cbfffeda1f56ffa20
-    port: 
+    rpc_host: https://:fa596017058b49ad998047ad81c45662@mainnet.infura.io/v3/4300a3997f8e4f9cbfffeda1f56ffa20
     abi: abi/eth.json
     query:
     - name: Swap

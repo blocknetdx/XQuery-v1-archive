@@ -10,7 +10,7 @@ events { worker_connections 1024; }
 http {
 
     server {
-        listen 80;
+        listen {{ port }};
         root /app/manager/;
 
         location /hasura/ {
@@ -23,15 +23,20 @@ http {
             proxy_redirect     off;
         }
 
-        location /help.txt {
+        location /help {
             alias /app/manager/examples/help.txt;
         }
 
-        location /help/schema.txt {
+        location /help/schema {
             alias /app/manager/examples/schema.txt;
         }
+
+        location /help/graph {
+            alias /app/manager/examples/graph.json;
+        }
+
 {% for chain in chains %}
-        location /help/{{ chain.name }}_{{ chain.event }}.txt {
+        location /help/{{ chain.name }}_{{ chain.event }} {
             alias /app/manager/examples/{{ chain.name }}_{{ chain.event }}.txt;
             autoindex off;
         }

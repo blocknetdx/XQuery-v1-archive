@@ -13,7 +13,7 @@ from eventhandler import EventHandler
 # from uniswap.token import Tokens
 # from utils.uniswap.tokens import tokens
 from utils.zmq import zmq_handler
-
+from utils.liveness import *
 import logging
 from logging.handlers import RotatingFileHandler, MemoryHandler
 
@@ -55,9 +55,25 @@ def main():
 	zmq_handler.init()
 
 	CHAIN_HOST = os.environ.get('CHAIN_HOST', 'https://api.avax.network/ext/bc/C/rpc')
-	CHAIN_PORT = os.environ.get('CHAIN_PORT','None')
-	CHAIN_HOST = CHAIN_HOST+':'+CHAIN_PORT if CHAIN_PORT!='None' else CHAIN_HOST
 	WORKER_THREADS = int(os.environ.get('WORKER_THREADS', 20))
+
+	CHAIN_NAME = os.environ.get('NAME', 'ETH')
+	
+	while True:
+		try:
+			if CHAIN_NAME == 'ETH':
+				live = eth_live(CHAIN_HOST)
+			elif CHAIN_NAME == 'AVAX':
+				live = avax_live(CHAIN_HOST)
+			if live == False:
+				logger.info(f'{CHAIN_NAME} node syncing... Retrying in 30 seconds')
+				time.sleep(30)
+			elif live == True:
+				logger.info(f'{CHAIN_NAME} node is live... Resuming')
+				break
+		except Exception as e:
+			logger.critical(f"Something went wrong when calling {CHAIN_NAME} host...\nException: ", exc_info=True)
+
 
 	w2 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
 	# w3.middleware_onion.add(local_filter_middleware)

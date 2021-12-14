@@ -6,12 +6,12 @@ import argparse
 import ipaddress
 wd = os.getcwd()
 
-def load_query(QUERY_FILE):
-	with open(f'{wd}/{QUERY_FILE}') as file:
+def load_yaml(FILE):
+	with open(FILE) as file:
 		data = yaml.load(file, Loader=yaml.FullLoader)
 		return data
 
-def gen_ips(subnet):
+def gen_ips(subnet,exclude):
 	ips = [str(ip) for ip in ipaddress.IPv4Network(subnet)]
 	return ips[2::]
 
@@ -34,14 +34,15 @@ if __name__ == "__main__":
 	QUERY_FILE = args.yaml
 	OUTPUT_FILE = args.output
 	SUBNET = args.subnet
-
-	ips = gen_ips(SUBNET)
+	
+	ips = gen_ips(SUBNET,None)
 	hasura_port = 8080
 	postgres_port = 5432
 	gateway_port1 = 5555
 	gateway_port2 = 5556
+	reverse_proxy_port = 80
 
-	query_file = load_query(QUERY_FILE)
+	query_file = load_yaml(f'{wd}/{QUERY_FILE}')
 	
 	final_data = {}
 	final_data['chains'] = []
@@ -65,6 +66,7 @@ if __name__ == "__main__":
 	final_data['graphql_engine_ip'] = ips.pop(0)
 	final_data['graphql_engine_port'] = str(hasura_port)
 	final_data['reverse_proxy_ip'] = ips.pop(0)
+	final_data['reverse_proxy_port'] = reverse_proxy_port
 	final_data['query_config'] = QUERY_FILE	
 	final_data['subnet'] = SUBNET
 	process_yaml(final_data,OUTPUT_FILE)

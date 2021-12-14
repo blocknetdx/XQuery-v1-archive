@@ -3,8 +3,8 @@ services:
 
 {% for chain in chains %}
 ####{{ chain.name.lower() }} STACK START
-  trade-processor-{{ chain.name.lower() }}:
-    build: ./trade-processor
+  event-processor-{{ chain.name.lower() }}:
+    build: ./event-processor
     depends_on:
       - "graphql-engine"
       - "gateway-processor"
@@ -13,8 +13,7 @@ services:
     environment:
       NAME: {{ chain.name }}
       WORKER_THREADS: 30
-      CHAIN_HOST: {{ chain.host }}
-      CHAIN_PORT: {{ chain.port }}
+      CHAIN_HOST: {{ chain.rpc_host }}
       DB_HOST: {{ postgres_ip }}
       DB_PORT: {{ postgres_port }}
       DB_USERNAME: postgres
@@ -27,7 +26,7 @@ services:
       - ${PWD}/{{ chain.abi }}:/app/manager/abi.json
       - ${PWD}/{{ query_config }}:/app/manager/query.yaml
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ chain.ip }}
 ####{{ chain.name.lower() }} STACK END
 
@@ -48,7 +47,7 @@ services:
       - "{{ gateway_processor_port1 }}:{{ gateway_processor_port1 }}"
       - "{{ gateway_processor_port2 }}:{{ gateway_processor_port2 }}"
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ gateway_processor_ip }}
   db-processor:
     build: ./db-processor
@@ -74,7 +73,7 @@ services:
       - ${PWD}/{{ chain.abi }}:/app/manager/{{ chain.abi }}
 {% endfor %}
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ db_processor_ip }}
   postgres:
     image: postgres:12
@@ -87,13 +86,13 @@ services:
       - "{{ postgres_port }}:{{ postgres_port }}"
     command: -p {{ postgres_port }}
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ postgres_ip }}
   graphql-engine:
     image: hasura/graphql-engine:v2.0.10
     hostname: graphql-engine
-    ports:
-      - "{{ graphql_engine_port }}:{{ graphql_engine_port }}"
+    #ports:
+    #  - "{{ graphql_engine_port }}:{{ graphql_engine_port }}"
     depends_on:
       - "postgres"
     restart: always
@@ -104,14 +103,15 @@ services:
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
       HASURA_GRAPHQL_SERVER_PORT: {{ graphql_engine_port }}
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ graphql_engine_ip }}
   reverse-proxy:
     build: ./reverse-proxy
     ports:
-      - "80:80"
+      - "{{ reverse_proxy_port }}:{{ reverse_proxy_port }}"
     restart: always
     environment:
+      PORT: {{ reverse_proxy_port }}
       CHAIN_ENDPOINT: {{ endpoint }}
       CHAIN_HASURA: {{ graphql_engine_ip}}
       CHAIN_HASURA_PORT: {{ graphql_engine_port }}
@@ -121,18 +121,18 @@ services:
 {% endfor %}
     depends_on:
 {% for chain in chains %}
-      - "trade-processor-{{ chain.name.lower() }}"
+      - "event-processor-{{ chain.name.lower() }}"
 {% endfor %}
     volumes:
-      - ${PWD}/{{ query_config }}:/app/manager/query.yaml
+      - ${PWD}/{{ query_config }}:/app/manager/{{ query_config }}
 {% for chain in chains %}
       - ${PWD}/{{ chain.abi }}:/app/manager/{{ chain.name }}.json
 {% endfor %}
     networks:
-      {{ graph.lower() }}:
+      backend:
         ipv4_address: {{ reverse_proxy_ip }}
 networks:
-  {{ graph.lower() }}:
+  backend:
     driver: bridge
     ipam:
       driver: default
@@ -140,6 +140,7 @@ networks:
         - subnet: {{ subnet }}
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
 volumes:
   {{ graph.lower() }}:
 

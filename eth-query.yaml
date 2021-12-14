@@ -1,10 +1,9 @@
 #Single chain - ETH - infura
 graph: ETH_infura
-endpoint: /singlechainETH
+endpoint: /xquery
 chains:
   - name: ETH
-    host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
-    port: 
+    rpc_host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
     abi: abi/eth.json
     query:
     - name: Swap

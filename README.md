@@ -1,6 +1,5 @@
 
-
-
+Powered by    [Blocknet](https://blocknet.co) and  [XQuery](https://xquery.io/)
 
 # Indexer
 - [Indexer](#indexer)
@@ -66,9 +65,7 @@ chains:
   #mandatory
   - name: Name of chain; no spaces required
     #mandatory
-    host: Host address of chain; required http
-    #mandatory
-    port: Port of chain; if it doesn't exist leave empty
+    rpc_host: Rpc endpoint of chain, host and ip;
     #mandatory
     abi: ABI file; check provided abi format
     #mandatory
@@ -111,12 +108,11 @@ or
 ```yaml
 # Single chain - AVAX
 graph: AVAX
-endpoint: /AVAX
+endpoint: /xquery
 chains:
   - name: AVAX
-    host: https://api.avax.network/ext/bc/C/rpc
-    port: 
-    abi: avax_abi.json
+    rpc_host: https://api.avax.network/ext/bc/C/rpc
+    abi: abi/avax_abi.json
     query:
     - name: Swap
     address:
@@ -150,12 +146,11 @@ chains:
 ```yaml
 #Single chain - ETH - infura
 graph: ETH_infura
-endpoint: /ETH
+endpoint: /xquery
 chains:
   - name: ETH
-    host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
-    port: 
-    abi: eth_abi.json
+    rpc_host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
+    abi: abi/eth_abi.json
     query:
     - name: Swap
     address:
@@ -192,12 +187,11 @@ or
 ```yaml
 #Multi chain AVAX - ETH
 graph: AVAX_ETH
-endpoint: /multichainAVAXETH
+endpoint: /xquery
 chains:
   - name: AVAX
-    host: https://api.avax.network/ext/bc/C/rpc
-    port: 
-    abi: avax_abi.json
+    rpc_host: https://api.avax.network/ext/bc/C/rpc
+    abi: abi/avax_abi.json
     query:
     - name: Swap
     address:
@@ -206,9 +200,8 @@ chains:
     historical:
     - fromBlock: "6800000"
   - name: ETH
-    host: https://:PROJECT_SECRET@mainnet.infura.io/v3/PROJECT_ID
-    port: 
-    abi: eth_abi.json
+    rpc_host: https://:PROJECT_SECRET@mainnet.infura.io/v3/PROJECT_ID
+    abi: abi/eth_abi.json
     query:
     - name: Swap
     address:
@@ -242,4 +235,4 @@ or
   
 
 ### Help <a name="help"></a>
-```http://localhost:80/help.txt```
+```http://localhost:80/help```
