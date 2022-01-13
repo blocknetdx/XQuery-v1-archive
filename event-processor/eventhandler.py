@@ -3,12 +3,12 @@ import json
 import time
 from queue import Queue
 from web3 import Web3
-# from database.models import db_session
 from utils.zmq import zmq_handler
 import yaml
 import json
 import logging
 
+token_data = dict()
 
 class EventHandler:
 	def __init__(self, web2: Web3, web3: Web3, web4: Web3, latest_block):
@@ -73,15 +73,21 @@ class EventHandler:
 
 	#get pair details from contract address
 	def get_tokens_from_caddress(self, contract_address):
-		contract = self.web4.eth.contract(address=contract_address,abi=self.abi['abi'])
-		token0_address = contract.functions.token0().call()
-		token1_address = contract.functions.token1().call()
-		token0 = self.get_token_data(token0_address)
-		token1 = self.get_token_data(token1_address)
-		return {
-		'token0': token0,
-		'token1': token1
-		}
+		global token_data
+		if contract_address in token_data:
+			return token_data[contract_address]
+		else:
+			contract = self.web4.eth.contract(address=contract_address,abi=self.abi['abi'])
+			token0_address = contract.functions.token0().call()
+			token1_address = contract.functions.token1().call()
+			token0 = self.get_token_data(token0_address)
+			token1 = self.get_token_data(token1_address)
+			data = {
+			'token0': token0,
+			'token1': token1
+			}
+			token_data[contract_address] = data
+			return data
 
 	#load index topics from file
 	def load_index_topics(self):
@@ -164,8 +170,6 @@ class EventHandler:
 
 					xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 					xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
-					self.logger.info(f"Worker {thread} Type: {xquery_type} Name: {xquery_name}")
-					
 
 					blockNumber = event['blockNumber']
 
@@ -225,7 +229,7 @@ class EventHandler:
 						except Exception as e:
 							self.logger.critical('Exception ',exc_info=True)
 
-						self.logger.info(f"{xquery_name} {swap_events}")
+						self.logger.info(f"Worker {thread} Type: {xquery_type} Name: {xquery_name}")
 						zmq_handler.insert_queue([swap_events])
 					except Exception as e:
 						self.logger.critical("Exception: ",exc_info=True)

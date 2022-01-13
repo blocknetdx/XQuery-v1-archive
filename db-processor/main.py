@@ -6,28 +6,11 @@ import json
 import yaml
 from models import *
 import logging
-from logging.handlers import RotatingFileHandler, MemoryHandler
-
-rfh = RotatingFileHandler(
-	filename='%slog' % __file__[:-2],
-	mode='a',
-	maxBytes=20*1024*1024,
-	backupCount=2,
-	encoding=None,
-	delay=0
-) 
-
-stdout = logging.StreamHandler(sys.stdout)
-mm = MemoryHandler(4096,flushLevel=logging.INFO,target=stdout,flushOnClose=True)
 
 logging.basicConfig(
 	level=logging.INFO,
 	format="{asctime} {levelname:<8} {message}",
 	style='{',
-	handlers=[
-		rfh,
-		mm
-	]
 )
 
 def load_schema():
