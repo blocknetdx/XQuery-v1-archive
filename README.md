@@ -82,77 +82,110 @@ chains:
   - fromBlock: Starting block number for historical events; Expected number
 ```
 ## Autobuild steps <a name="1"></a>
-### 1. Clone [EXRPROXY-ENV](https://github.com/blocknetdx/exrproxy-env) repo 
-Using the command from below you can clone the repo with XQuery submodule
+### Use with [EXRPROXY-ENV](https://github.com/blocknetdx/exrproxy-env) repo 
+#### Requirements
+- `Docker`
+- `Docker-Compose`
+- `Servicenode Private Key`
+- `Port 80 must be opened on the host`
+
+#### 1. Manually edit your environment data
 
 ```
-git clone --recursive <project url>
+export PUBLIC_IP=""  # Update with your public ip address
+export SN_NAME="servicenode01"  # Update with your snode name
+export SN_KEY="servicenodeprivatekey"  # Update with your snode private key
+export SN_ADDRESS="servicenodekeyaddress"  # Update with your snode address
+export RPC_USER="user"
+export RPC_PASSWORD="password"
+docker-compose -f "docker-compose.yml" up -d --build
 ```
 
-If you already have the repo you can pull the submodule with
+#### 2. Clone repo - using the command below you can clone this repo with XQuery submodule
+
+```
+git clone --recursive https://github.com/blocknetdx/exrproxy-env.git
+```
+
+```
+cd exrproxy-env
+```
 
 ```
 git submodule update --init --recursive
 ```
 
-### 2. Input file
-Edit your XQuery integration input file with your desired graph. 
+#### 3. Input file - Edit your XQuery integration input file with your desired graph 
 
-Check for reference
+Check for reference for local nodes:
 
 ```
 autobuild/examples/xquery-gethINT-avaxINT.yaml
 ```
 
-To use external connections check 
+To use external connections check:
 
 ```
 autobuild/examples/xquery-gethEXT-avaxEXT.yaml
 ```
 
-### 3. Move to autobuild directory
+#### 4. Change to autobuild directory
 
 ```
 cd autobuild
 ```
 
-### 4. Generate docker-compose stack
+#### 5. Install python requirements if not already installed
+```
+pip3 install -r requirements.txt
+```
+
+#### 6. Generate docker-compose stack
 
 ```
 python app.py --yaml examples/xquery-gethINT-avaxINT.yaml
 ```
 
-### 5. Move to the root folder of the repo and move/copy the generated files
+#### 7. Change to the root folder of the repo and move/copy the generated files
 
 ```
-mv autobuild/dockercompose-custom.yaml docker-compose.yaml
+mv autobuild/dockercompose-custom.yaml docker-compose.yml
 mv autobuild/xquery.yaml xquery.yaml
 ```
 
-### 6. Build images
+#### 8. Build images
 
 ```
 docker-compose build
 ```
 
-### 7. Deploy stack
+#### 9. Deploy stack
 
 ```
-docker-compose -f docker-compose.yaml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 ```
 
-### 8. Get data
-
-Check if the XQuery service is available at
+#### 10. Create project
 
 ```
-http://127.0.0.1/xrs/xquery
+curl http://127.0.0.1/xrs/eth_passthrough \
+                    -X POST \
+                    -H "Content-Type: application/json" \
+                    -d '{"jsonrpc":"2.0","method":"request_project","params": [],"id":1}'
 ```
 
-Use specified GraphQL endpoint to retrive data
+#### 11. With the api-key provided and after payment get your data
 
 ```
-http://127.0.0.1/xrs/xquery/indexer
+curl http://127.0.0.1/xrs/xquery/<PROJECT-ID>/help -X POST -H "Api-Key:<API-KEY>"
+```
+
+#### 12. Test XQuery via python code
+
+Check the python script in autobuild/xqtest.py
+
+```
+python3 exrproxy-env/autobuild/xqtest.py --projectid YOUR-PROJECT-ID --apikey YOUR-API-KEY
 ```
 
 
