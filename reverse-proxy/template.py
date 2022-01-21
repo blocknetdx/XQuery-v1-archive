@@ -25,8 +25,9 @@ def yaml_from_abi():
 		inputs.append({'name':'xquery_side','value':'Optional(str)'})
 		inputs.append({'name':'xquery_address_filter','value':'Optional(str)'})
 		inputs.append({'name':'xquery_blocknumber','value':'Optional(int)'})
+		inputs.append({'name':'xquery_fn_name','value':'Optional(str)'})
 		for i in data:
-			if i['type'].lower() == 'event':
+			if i['type'].lower() in ['event','function']:
 				for k in i['inputs']:
 					name = k['name']
 					val = 'Optional(str)'
@@ -89,19 +90,6 @@ type xquery {{
 """.format(text=text)
 	write_text_file(final_text, "examples/schema.txt")
 	print(final_text)
-
-def query_text(data):
-	for key, item in data.items():
-		final_text = "query MyQuery {\n"
-		chain_name = key
-		for k, i in item.items():
-			event_name = k
-			final_text += """ xquery(where: {xquery_chain_name: {_eq: "CHAIN_NAME"}, xquery_query_name: {_eq: "EVENT_NAME"}})\n {\n""".replace("CHAIN_NAME", chain_name).replace("EVENT_NAME", event_name)
-			for kk, ii in i.items():
-				final_text += f"  {kk}\n"
-			final_text += " }\n}"
-		write_text_file(final_text, f"examples/{chain_name}_{event_name}.txt")
-		print(final_text)
 	
 def help_text(query, data):
 	port = os.environ.get('PORT', '80')
@@ -111,9 +99,6 @@ def help_text(query, data):
 	text +="List available endpoints\n\t"+ f"http://localhost:{port}/help\n\n"
 	text +="GraphQL endpoint\n\t"+ f"http://localhost:{port}{endpoint}/\n\n"
 	text +="GraphQL data types\n\t"+ f"http://localhost:{port}/help/schema\n\n"
-	for key, item in data.items():
-		for k, i in item.items():
-			text +=f"Query example for chain {key} and event {k}\n\t"+ f"http://localhost:{port}/help/{key}_{k}\n\n"
 	write_text_file(text, f"examples/help.txt")
 	data = dict(query)
 	for key, item in data.items():
@@ -136,13 +121,13 @@ if __name__ == "__main__":
 
 	#load needed data
 	#events with inputs
-	abis = concat_abis(query, data, 'dict')
-	help_text(query, abis)
+	abis_list = concat_abis(None, None, 'list')
+	abis_dict = concat_abis(query, data, 'dict')
+	help_text(query, abis_list)
 	general_schema_text(data)
-	query_text(abis)
 
 	#write nginx from jinja2 template
-	final_data = gen_data_for_template(abis)
+	final_data = gen_data_for_template(abis_dict)
 	process_template(final_data)
 
 	

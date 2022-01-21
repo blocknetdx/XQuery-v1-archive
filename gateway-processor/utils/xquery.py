@@ -1,9 +1,3 @@
-# class UniswapTrade:
-#     def __init__(self, txid, idx):
-#         self.txid = txid
-#         self.idx = idx
-
-
 class XQuery:
     def __init__(self, *initial_data, **kwargs):
         for dictionary in initial_data:

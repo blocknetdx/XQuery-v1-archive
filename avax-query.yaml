@@ -1,11 +1,10 @@
-
 # Single chain - AVAX
 graph: AVAX
 endpoint: /xquery
 chains:
-  - name: AVAX
+  - name: AVAX_PANGOLIN
     rpc_host: https://api.avax.network/ext/bc/C/rpc
-    abi: abi/avax.json
+    abi: abi/pangolinRouter.json
     query:
     - name: Swap
     address:

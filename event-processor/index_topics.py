@@ -2,12 +2,11 @@ import os
 import json
 import yaml
 from web3 import Web3
-# keccak
 
 cwd = os.getcwd()
 
 def load_abi():
-	abi_path = os.getcwd()+'/'+os.environ.get('ABI_FILE','abi.json')
+	abi_path = os.getcwd()+'/'+os.environ.get('ABI_FILE','RC20.json')
 	with open(abi_path) as file:
 		abi = json.load(file)
 		return abi

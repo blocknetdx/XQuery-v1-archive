@@ -73,7 +73,7 @@ chains:
     #mandatory
     query:
     - name: What events to search for
-    #not mandatory
+    #mandatory
     address:
     - name: Router name; no spaces required
       address: Router address
@@ -168,7 +168,7 @@ docker-compose -f docker-compose.yml up -d --build
 #### 10. Create project
 
 ```
-curl http://127.0.0.1/xrs/eth_passthrough \
+curl http://127.0.0.1/xrs/projects \
                     -X POST \
                     -H "Content-Type: application/json" \
                     -d '{"jsonrpc":"2.0","method":"request_project","params": [],"id":1}'
@@ -185,7 +185,7 @@ curl http://127.0.0.1/xrs/xquery/<PROJECT-ID>/help -X POST -H "Api-Key:<API-KEY>
 Check the python script in autobuild/xqtest.py
 
 ```
-python3 exrproxy-env/autobuild/xqtest.py --projectid YOUR-PROJECT-ID --apikey YOUR-API-KEY
+python3 exrproxy-env/autobuild/xq.py --projectid YOUR-PROJECT-ID --apikey YOUR-API-KEY
 ```
 
 
@@ -196,11 +196,11 @@ python3 exrproxy-env/autobuild/xqtest.py --projectid YOUR-PROJECT-ID --apikey YO
 ```yaml
 # Single chain - AVAX
 graph: AVAX
-endpoint: /xquery
+endpoint: /indexer
 chains:
-  - name: AVAX
+  - name: AVAX_PANGOLIN
     rpc_host: https://api.avax.network/ext/bc/C/rpc
-    abi: abi/avax_abi.json
+    abi: abi/pangolinRouter.json
     query:
     - name: Swap
     address:
@@ -213,12 +213,12 @@ chains:
 ### eth-query.yaml <a name="eth_query"></a>
 ```yaml
 #Single chain - ETH - infura
-graph: ETH_infura
-endpoint: /xquery
+graph: ETH
+endpoint: /indexer
 chains:
-  - name: ETH
+  - name: ETH_UNISWAP
     rpc_host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
-    abi: abi/eth_abi.json
+    abi: abi/uniswapRouter.json
     query:
     - name: Swap
     address:
@@ -236,11 +236,11 @@ chains:
 ```yaml
 #Multi chain AVAX - ETH
 graph: AVAX_ETH
-endpoint: /xquery
+endpoint: /indexer
 chains:
-  - name: AVAX
+  - name: AVAX_PANGOLIN
     rpc_host: https://api.avax.network/ext/bc/C/rpc
-    abi: abi/avax_abi.json
+    abi: abi/pangolinRouter.json
     query:
     - name: Swap
     address:
@@ -248,9 +248,9 @@ chains:
       address: '0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106'
     historical:
     - fromBlock: "6800000"
-  - name: ETH
-    rpc_host: https://:PROJECT_SECRET@mainnet.infura.io/v3/PROJECT_ID
-    abi: abi/eth_abi.json
+  - name: ETH_UNISWAP
+    rpc_host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
+    abi: abi/uniswapRouter.json
     query:
     - name: Swap
     address:

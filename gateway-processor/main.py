@@ -63,9 +63,9 @@ def main():
                     for message in j['data']:
                         item = XQuery()
                         for attr in list(message):
-                            setattr(item, attr, message[attr] )
+                            setattr(item, attr, message[attr])
 
-                        if any((x.tx_hash == item.tx_hash and x.query_name == item.query_name) for x in txs):
+                        if any((x.tx_hash == item.tx_hash and x.query_name == item.query_name and x.chain_name == item.chain_name and x.blocknumber == item.blocknumber and x.timestamp == item.timestamp) for x in txs):
                             logger.info(f'Already processed TX: {item.tx_hash} Query: {item.query_name}')
 
                             continue
@@ -83,24 +83,6 @@ def main():
                     connection_id = j['data']['id']
                     if connection_id in connections:
                         continue
-
-                    # if len(connections) == 0:
-                    #     limit = POD_TOKEN_INCREMENT
-                    #     offset = 0
-                    # else:
-                    #     all_connections = sorted(connections.items(), key=lambda x: x[1]['offset'])
-                    #     offsets = []
-                    #     for conn in all_connections:
-                    #         offsets.append(conn[1]['offset'])
-
-                    #     missing = [ele for ele in range(0, max(offsets) + POD_TOKEN_INCREMENT, POD_TOKEN_INCREMENT) if ele not in offsets]
-                    #     max_offset = max(offsets)
-
-                    #     if len(missing) > 0:
-                    #         limit = POD_TOKEN_INCREMENT
-                    #         offset = missing[0]
-                    #     else:
-                    #         limit = POD_TOKEN_INCREMENT
 
                     connections[connection_id] = {
                         # 'limit': limit,

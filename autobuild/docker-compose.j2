@@ -3,7 +3,7 @@ services:
 
 {% for chain in chains %}
 ####{{ chain.name.lower() }} STACK START
-  event-processor-{{ chain.name.lower() }}:
+  event-processor-{{ chain.name.lower() | replace('_','-') }}:
     build: ./event-processor
     depends_on:
       - "graphql-engine"
@@ -121,7 +121,7 @@ services:
 {% endfor %}
     depends_on:
 {% for chain in chains %}
-      - "event-processor-{{ chain.name.lower() }}"
+      - "event-processor-{{ chain.name.lower() | replace('_','-') }}"
 {% endfor %}
     volumes:
       - ${PWD}/{{ query_config }}:/app/manager/{{ query_config }}

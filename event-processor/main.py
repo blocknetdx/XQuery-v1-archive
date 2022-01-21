@@ -41,9 +41,9 @@ def main():
 	
 	while True:
 		try:
-			if CHAIN_NAME == 'ETH':
+			if 'ETH' in CHAIN_NAME:
 				live = eth_live(CHAIN_HOST)
-			elif CHAIN_NAME == 'AVAX':
+			elif 'AVAX' in CHAIN_NAME:
 				live = avax_live(CHAIN_HOST)
 			if live == False:
 				logger.info(f'{CHAIN_NAME} node syncing... Retrying in 30 seconds')

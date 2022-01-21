@@ -7,8 +7,9 @@ wd = os.getcwd()
 def concat_abis(query, schema_data, _type):
 	env = os.environ.__dict__['_data']
 	abis = {}
+	abis["RC20"] = "RC20.json"
 	final_data_list = []
-	final_data_dict = {}
+	final_data_dict = {"RC20":{}}
 	for key, item in env.items():
 		i = item.decode('utf-8')
 		k = key.decode('utf-8')
@@ -29,7 +30,7 @@ def concat_abis(query, schema_data, _type):
 					for chain in query['chains']:
 						if chain['name'] == abi:
 							query_events = [q['name'] for q in chain['query']]
-					if a['type'].lower() == 'event' and a['name'] in query_events:
+					if a['type'].lower() in ['event','function']:
 						final_data_dict[abi][a['name']] = {}
 						for x in a['inputs']:
 							item = f'xquery_{x["name"]}'
@@ -44,6 +45,7 @@ def concat_abis(query, schema_data, _type):
 							final_data_dict[abi][a['name']]["xquery_token0_symbol"] = 'Str!'
 							final_data_dict[abi][a['name']]["xquery_token0_name"] = 'Str!'
 							final_data_dict[abi][a['name']]["xquery_token0_decimals"] = 'Str!'
+							final_data_dict[abi][a['name']]["xquery_fn_name"] = 'Str!'
 							final_data_dict[abi][a['name']]["xquery_blocknumber"] = 'Int!'
 							final_data_dict[abi][a['name']]["xquery_timestamp"] = 'Int!'
 	if _type == 'list':

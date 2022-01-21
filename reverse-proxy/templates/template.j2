@@ -34,12 +34,5 @@ http {
         location /help/graph {
             alias /app/manager/examples/graph.json;
         }
-
-{% for chain in chains %}
-        location /help/{{ chain.name }}_{{ chain.event }} {
-            alias /app/manager/examples/{{ chain.name }}_{{ chain.event }}.txt;
-            autoindex off;
-        }
-{% endfor %}
     }
 }

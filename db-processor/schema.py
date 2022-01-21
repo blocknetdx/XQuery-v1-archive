@@ -9,7 +9,7 @@ J2_ENV = Environment(loader=FileSystemLoader(''),trim_blocks=True)
 def concat_abis():
 	wd = os.getcwd()
 	env = os.environ.__dict__['_data']
-	abis = []
+	abis = ['RC20.json']
 	final_data = []
 	for key, item in env.items():
 		i = item.decode('utf-8')
@@ -42,8 +42,9 @@ def yaml_from_abi():
 		inputs.append({'name':'xquery_side','value':'Optional(str)'})
 		inputs.append({'name':'xquery_address_filter','value':'Optional(str)'})
 		inputs.append({'name':'xquery_blocknumber','value':'Optional(int)'})
+		inputs.append({'name':'xquery_fn_name','value':'Optional(str)'})
 		for i in data:
-			if i['type'].lower() == 'event':
+			if i['type'].lower() in ['event','function']:
 				for k in i['inputs']:
 					name = k['name']
 					val = 'Optional(str)'

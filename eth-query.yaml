@@ -1,10 +1,10 @@
 #Single chain - ETH - infura
 graph: ETH_infura
-endpoint: /xquery
+endpoint: /indexer
 chains:
   - name: ETH
     rpc_host: https://:INFURA_SECRET@mainnet.infura.io/v3/INFURA_PROJECT
-    abi: abi/eth.json
+    abi: abi/uniswapRouter.json
     query:
     - name: Swap
     address:
