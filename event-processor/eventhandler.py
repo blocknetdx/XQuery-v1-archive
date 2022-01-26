@@ -254,9 +254,9 @@ class EventHandler:
 								swap_events[f'{k}'] = v
 						except Exception as e:
 							self.logger.critical('Exception ',exc_info=True)
-						# if 'address_filter' in list(swap_events):
-						self.logger.info(f"Worker {thread} Type: {xquery_type} Name: {xquery_name}")
-						zmq_handler.insert_queue([swap_events])
+						if 'address_filter' in list(swap_events):
+							self.logger.info(f"Worker {thread} Type: {xquery_type} Name: {xquery_name}")
+							zmq_handler.insert_queue([swap_events])
 						# else:
 						# 	self.queue.task_done()
 					except Exception as e:
