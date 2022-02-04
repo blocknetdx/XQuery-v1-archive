@@ -52,7 +52,11 @@ def yaml_from_abi():
 						name = 'xquery_none'
 					if '_' not in name:
 						name = 'xquery_'+name
-					inputs.append({'name':name.lower(),'value':val})
+					if '_' == name[0]:
+						name = 'xquery'+name
+					d = {'name':name.lower(),'value':val}
+					if d not in inputs:
+						inputs.append(d)
 		inputs = list({v['name']:v for v in inputs}.values())
 		yamldata = [{"classes":[{"name":"XQuery","attributes":inputs}]}]
 		with open(wd+'/schema.yaml', "w") as fname:

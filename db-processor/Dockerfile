@@ -12,4 +12,4 @@ RUN apk add --no-cache build-base musl-dev gcc g++ libffi-dev openssl-dev python
     && rm -rf /usr/share/man \
     && rm -rf /tmp/*
 
-CMD sleep 10 && python3 /app/manager/schema.py && python3 /app/manager/main.py
+CMD sleep 10 && python3 /app/manager/schema.py && python3 /app/manager/migrate_db.py && python3 /app/manager/main.py

@@ -128,7 +128,7 @@ class EventHandler:
 			'toBlock': 'latest'
 		})
 
-		while self.running:
+		while self.running and self.errors < 2:
 			try:
 				for event in forward_filter.get_new_entries():
 					self.queue.put(event)
@@ -153,6 +153,8 @@ class EventHandler:
 			except Exception as e:
 				self.logger.critical('Exception in Listener loop!',exc_info=True)
 				self.errors += 0.2
+				if self.errors > 2:
+					self.running = False
 
 	def queue_handler(self, thread):
 		self.logger.info('Starting Worker: {}'.format(thread))
@@ -191,7 +193,7 @@ class EventHandler:
 							else:
 								function[k] = ','.join(v)
 					except Exception as e:
-						self.logger.exception(f"Worker {thread} {xquery_name} Failed to get function data for TX {tx}")
+						self.logger.critical(f"Worker {thread} {xquery_name} Failed to get function data for TX {tx}")
 						# self.logger.critical(f"Worker {thread} {xquery_name} Failed to get function data for TX {tx}",exc_info=True)
 
 					blockNumber = event['blockNumber']

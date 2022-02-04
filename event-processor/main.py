@@ -50,56 +50,58 @@ def main():
 				time.sleep(30)
 			elif live == True:
 				logger.info(f'{CHAIN_NAME} node is live... Resuming')
-				break
+		
+				w2 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w2.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+				w3 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+				w4 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w4.middleware_onion.inject(geth_poa_middleware, layer=0)
+				LATEST_BLOCK = str(w4.eth.getBlock('latest').number)
+
+				logger.info('Starting Loop...')
+				event_handler = EventHandler(w2, w3, w4, LATEST_BLOCK)
+
+				try:
+					ping_handler = PingHandler(zmq_handler)
+
+					executor = concurrent.futures.ThreadPoolExecutor()
+
+					futures = []
+					futures.append(executor.submit(zmq_handler.send_trades))
+
+					ping_handler.start()
+
+					for i in range(0, WORKER_THREADS):
+						futures.append(executor.submit(event_handler.queue_handler, thread=i))
+
+					event_handler.loop()
+
+					executor._threads.clear()  
+					thread._threads_queues.clear()
+					executor.shutdown(wait=False)
+					# sys.exit(1)
+				except Exception as e:
+					logger.critical("Closing...Exception: ", exc_info=True)
+					zmq_handler.disconnect()
+					executor._threads.clear()
+					thread._threads_queues.clear()
+					executor.shutdown(wait=False)
+					# sys.exit(1)
+				finally:
+					zmq_handler.disconnect()
+					executor._threads.clear()
+					thread._threads_queues.clear()
+					executor.shutdown(wait=False)
+					# sys.exit(1)
+
 		except Exception as e:
-			logger.critical(f"Something went wrong when calling {CHAIN_NAME} host...\nException: ", exc_info=True)
+			logger.info(f"Something went wrong when calling {CHAIN_NAME} host...")
 
 
-	w2 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
-	w2.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-	w3 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
-	w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-	w4 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
-	w4.middleware_onion.inject(geth_poa_middleware, layer=0)
-	LATEST_BLOCK = str(w4.eth.getBlock('latest').number)
-
-	logger.info('Starting Loop...')
-	event_handler = EventHandler(w2, w3, w4, LATEST_BLOCK)
-
-	try:
-		ping_handler = PingHandler(zmq_handler)
-
-		executor = concurrent.futures.ThreadPoolExecutor()
-
-		futures = []
-		futures.append(executor.submit(zmq_handler.send_trades))
-
-		ping_handler.start()
-
-		for i in range(0, WORKER_THREADS):
-			futures.append(executor.submit(event_handler.queue_handler, thread=i))
-
-		event_handler.loop()
-
-		executor._threads.clear()  
-		thread._threads_queues.clear()
-		executor.shutdown(wait=False)
-		sys.exit(1)
-	except Exception as e:
-		logger.critical("Exception: ", exc_info=True)
-		zmq_handler.disconnect()
-		executor._threads.clear()
-		thread._threads_queues.clear()
-		executor.shutdown(wait=False)
-		sys.exit(1)
-	finally:
-		zmq_handler.disconnect()
-		executor._threads.clear()
-		thread._threads_queues.clear()
-		executor.shutdown(wait=False)
-		sys.exit(1)
+	
 
 if __name__ == '__main__':
 	main()
