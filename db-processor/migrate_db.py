@@ -64,6 +64,16 @@ def add_column(table, name, data_type):
 	except Exception as e:
 		print(f'ADD {table} {name} {data_type}\n{e}')
 
+def del_column(table, name):
+	try:
+		conn = db.connect(host=host, database=database, user=user, password=password)
+		conn.autocommit = True
+		cursor = conn.cursor()
+		cursor.execute(f'ALTER TABLE {table} DROP COLUMN {name}')
+		conn.close()
+		print(f'DEL {table} - {name}')
+	except Exception as e:
+		print(f'DEL {table} {name}\n{e}')
 
 
 if __name__ == '__main__':
@@ -84,3 +94,4 @@ if __name__ == '__main__':
 		add_column(table_name, column_name, data_type)
 		if required:
 			not_required_column(table_name, column_name)
+	del_column(table_name, '_data')
