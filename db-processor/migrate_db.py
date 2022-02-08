@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
 	for entry in schema:
 		data_type = entry[1].split('(')[1].split(')')[0].strip()
-		required = False if entry[1].split('(')[0].strip()=='Optional' else False
+		not_required = True if entry[1].split('(')[0].strip()=='Optional' else False
 		column_name = entry[0].strip()
 		if data_type == 'str':
 			data_type = 'text'
@@ -92,6 +92,6 @@ if __name__ == '__main__':
 		elif data_type == 'float':
 			data_type = 'float8'
 		add_column(table_name, column_name, data_type)
-		if required:
+		if not_required:
 			not_required_column(table_name, column_name)
 	del_column(table_name, '_data')
