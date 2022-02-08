@@ -19,6 +19,19 @@ def load_schema():
 					order.append([j['name'],j['value']])
 	return order
 
+def get_columns(table):
+	try:
+		conn = db.connect(host=host, database=database, user=user, password=password)
+		conn.autocommit = True
+		cursor = conn.cursor()
+		cursor.execute(f'select * from {table} LIMIT 0')
+		colnames = [desc[0] for desc in cursor.description]
+		conn.close()
+		print(f'GET COLUMNS {table}')
+		return colnames
+	except Exception as e:
+		print(f'GET COLUMNS {table}\n{e}')
+
 def create_table(table):
 	try:
 		conn = db.connect(host=host, database=database, user=user, password=password)
@@ -80,6 +93,11 @@ if __name__ == '__main__':
 	table_name = 'xquery'
 	schema = load_schema()
 	create_table(table_name)
+
+	columns = get_columns(table_name)
+	for col in columns:
+		if col !='id':
+			not_required_column(table_name, col)
 
 	for entry in schema:
 		data_type = entry[1].split('(')[1].split(')')[0].strip()
