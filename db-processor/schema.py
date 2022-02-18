@@ -32,6 +32,7 @@ def yaml_from_abi():
 		inputs.append({'name':'xquery_chain_name','value':'Required(str)'})
 		inputs.append({'name':'xquery_query_name','value':'Required(str)'})
 		inputs.append({'name':'xquery_timestamp','value':'Required(int)'})
+		inputs.append({'name':'xquery_xhash','value':'Required(str)'})
 		inputs.append({'name':'xquery_tx_hash','value':'Required(str)'})
 		inputs.append({'name':'xquery_token0_name','value':'Optional(str)'})
 		inputs.append({'name':'xquery_token0_symbol','value':'Optional(str)'})

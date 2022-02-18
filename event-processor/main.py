@@ -12,6 +12,7 @@ from eventhandler import EventHandler
 from utils.zmq import zmq_handler
 from utils.liveness import *
 import logging
+import hashlib
 
 logging.basicConfig(
 	level=logging.INFO,

@@ -1,4 +1,4 @@
 PyYAML
 Jinja2
-pyzmq
+pyzmq==22.3.0
 pony

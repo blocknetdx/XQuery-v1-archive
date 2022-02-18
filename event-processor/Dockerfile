@@ -12,6 +12,5 @@ RUN apt-get install -y build-essential musl-dev gcc g++ libffi-dev libssl-dev py
     && rm -rf /usr/share/man \
     && rm -rf /tmp/*
 
-#CMD sleep 20 && python3 /app/manager/index_topics.py && python3 /app/manager/schema.py && python3 /app/manager/main.py
 CMD sleep 20 && python3 /app/manager/index_topics.py && python3 /app/manager/main.py
 #CMD sleep 100000000000000000

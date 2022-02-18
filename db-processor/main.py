@@ -30,6 +30,7 @@ logger = logging.getLogger('main.py')
 def main(xquery_yaml_order):
 	context = zmq.Context()
 	socket = context.socket(zmq.PULL)
+	socket.set_hwm(0)
 
 	logger.info('Connecting...')
 
@@ -44,23 +45,24 @@ def main(xquery_yaml_order):
 			try:
 				j = ujson.loads(msg)
 			except Exception as e:
-				logger.critical("Exception: ",exc_info=True)
+				logger.critical("Exception ujson: ",exc_info=True)
 				j = json.loads(msg)
 
 			if j['topic'] == 'trades':
 				for message in j['data']:
 					try:
-
+						logger.info(f'RECEIVED QUERY:{message["query_name"]} XHASH:{message["xhash"]} TX:{message["tx_hash"]}')
 						item = XQuery(
 							xquery_query_name = message['query_name'],
 							xquery_chain_name = message['chain_name'],
 							xquery_timestamp = int(message['timestamp']),
-							xquery_tx_hash = message['tx_hash']
+							xquery_tx_hash = message['tx_hash'],
+							xquery_xhash = message['xhash']
 							)
 					
 						for o in xquery_yaml_order:
 							for name, value in message.items():
-								if o == f'xquery_{name.lower()}' and name.lower() not in ['query_name','chain_name','tx_hash','timestamp']:
+								if o == f'xquery_{name.lower()}' and name.lower() not in ['query_name','chain_name','tx_hash','timestamp','xhash']:
 									v = str(value)
 									if o == 'xquery_timestamp':
 										v = int(v)
@@ -69,7 +71,7 @@ def main(xquery_yaml_order):
 									item.set(**d)
 				
 						commit()
-						logger.info(f'Logged: {message["tx_hash"]}')
+						logger.info(f'LOGGED QUERY:{message["query_name"]} XHASH:{message["xhash"]} TX:{message["tx_hash"]}')
 					except Exception as e:
 						logger.critical("Exception: ",exc_info=True)
 		except Exception as e:

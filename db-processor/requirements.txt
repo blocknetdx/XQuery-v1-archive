@@ -2,5 +2,5 @@ PyYAML
 Jinja2
 ujson
 #orjson
-pyzmq
+pyzmq==22.3.0
 pony

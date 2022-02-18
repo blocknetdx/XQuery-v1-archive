@@ -7,6 +7,7 @@ from utils.zmq import zmq_handler
 import yaml
 import json
 import logging
+import hashlib
 
 token_data = dict()
 
@@ -25,7 +26,7 @@ class EventHandler:
 		self.abi = self.load_abi()
 		self.rc_abi = self.load_rc_abi()
 		self.topics = self.get_topics_for_query()
-		self.address = self.get_address_filter()
+		self.address = self.get_address_filter_input()
 		self.latest_block = int(latest_block) if latest_block.isdigit() else latest_block
 		self.current_block = int(latest_block) if latest_block.isdigit() else int(latest_block)
 		self.start_block = self.load_start_block()
@@ -41,7 +42,7 @@ class EventHandler:
 		return start_block
 
 	#get addresses filter if any
-	def get_address_filter(self):
+	def get_address_filter_input(self):
 		addresses = []
 		if 'address' in list(self.query):
 			for address in self.query['address']:
@@ -59,36 +60,6 @@ class EventHandler:
 					if index_topic['name'] == name:
 						topics.append(index_topic['topic'])
 		return topics
-
-	#get token details from address
-	def get_token_data(self, address):
-		contract = self.web4.eth.contract(address=Web3.toChecksumAddress(address),abi=self.rc_abi['abi'])
-		name = contract.functions.name().call()
-		symbol = contract.functions.symbol().call()
-		decimals = contract.functions.decimals().call()
-		return {
-		"name": str(name),
-		"symbol": str(symbol),
-		"decimals": str(decimals)
-		}
-
-	#get pair details from contract address
-	def get_tokens_from_caddress(self, contract_address):
-		global token_data
-		if contract_address in token_data:
-			return token_data[contract_address]
-		else:
-			contract = self.web4.eth.contract(address=contract_address,abi=self.rc_abi['abi'])
-			token0_address = contract.functions.token0().call()
-			token1_address = contract.functions.token1().call()
-			token0 = self.get_token_data(token0_address)
-			token1 = self.get_token_data(token1_address)
-			data = {
-			'token0': token0,
-			'token1': token1
-			}
-			token_data[contract_address] = data
-			return data
 
 	#load index topics from file
 	def load_index_topics(self):
@@ -120,6 +91,102 @@ class EventHandler:
 				if entry['name'] == self.chain_name: 
 					return entry
 
+	#get token details from address
+	def get_token_data(self, w3, address, abi):
+		contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
+		name = contract.functions.name().call()
+		symbol = contract.functions.symbol().call()
+		decimals = contract.functions.decimals().call()
+		return {
+		"name": str(name),
+		"symbol": str(symbol),
+		"decimals": str(decimals)
+		}
+
+	#get pair details from contract address
+	def get_tokens_from_caddress(self, w3, contract_address, abi):
+		global token_data
+		if contract_address in token_data:
+			return token_data[contract_address]
+		else:
+			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address),abi=abi)
+			token0_address = contract.functions.token0().call()
+			token1_address = contract.functions.token1().call()
+			token0 = self.get_token_data(w3, token0_address,abi)
+			token1 = self.get_token_data(w3, token1_address,abi)
+			data = {
+			'token0': token0,
+			'token1': token1
+			}
+			token_data[contract_address] = data
+			return data
+
+	def get_address_filter(self, xquery_event):
+		for address in self.address:
+			for key, item in xquery_event.items():
+				if isinstance(item, str) and item in address['address']:
+					return address
+		return None
+
+
+	def get_function(self, thread, w3, event_name, tx, contract_address, abi):
+		function = {}
+		transaction = w3.eth.get_transaction(tx)
+		try:
+			contract_router = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+			decoded_input = contract_router.decode_function_input(transaction.input)
+			func = decoded_input[0]
+			func_data = decoded_input[1]
+			function["fn_name"] = func.__dict__['fn_name']
+			for k, v in func_data.items():
+				if not isinstance(v, list):
+					function[k] = str(v)
+				else:
+					function[k] = ','.join(v)
+		except Exception as e:
+			self.logger.critical(f'Exception get_function {thread} {event_name} {tx} {contract_address}')
+		return function
+
+	def process_event(self, thread, w3, event, event_name, event_type, contract_address, abi):
+		xquery_event = {}
+		try:
+			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+			contract_call = getattr(contract,f'{event_type.lower()}s')
+			action_call = getattr(contract_call,event_name.lower().capitalize())
+			xquery_event = action_call().processLog(event)
+			xquery_event = json.loads(Web3.toJSON(xquery_event))
+		except Exception as e:
+			self.logger.critical(f'Exception process_event {thread} {event_name} {event_type} {contract_address}',exc_info=True)			
+		return xquery_event
+
+	def process_event_args(self, thread, w3, xquery_name, xquery_event, contract_address, abi):
+		args = {}
+		try:
+			for arg in list(xquery_event['args']):
+				args[arg] = xquery_event['args'][arg]
+			del args['args']
+		except Exception as e:
+			pass
+		try:
+			if xquery_name == 'Swap':
+				tokens = self.get_tokens_from_caddress(w3, xquery_event['address'], self.rc_abi['abi'])
+				for key, item in tokens.items():
+					for key1, item1 in item.items():
+						args[f'{key}_{key1}'] = item1
+				#check side
+				if args['amount0Out'] == 0:
+					args['side'] = 'sell'
+				elif args['amount1Out'] == 0:
+					args['side'] = 'buy'				
+			else:
+				token_data = self.get_token_data(w3, contract_address, self.rc_abi['abi'])
+				args['token0_name'] = token_data['name']
+				args['token0_symbol'] = token_data['symbol']
+				args['token0_decimals'] = token_data['decimals']
+		except Exception as e:
+			self.logger.critical(f"Exception process_event_args {thread} {xquery_name} {contract_address}",exc_info=True)
+		return args
+
 	#listen loop for incoming events | backward listner
 	def loop(self):
 		self.logger.info('Starting listener...')
@@ -130,6 +197,9 @@ class EventHandler:
 
 		while self.running and self.errors < 2:
 			try:
+				forward_filter = self.web3.eth.filter({
+					'toBlock': 'latest'
+				})
 				for event in forward_filter.get_new_entries():
 					self.queue.put(event)
 
@@ -178,24 +248,6 @@ class EventHandler:
 					xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 					xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 
-					contract = self.web3.eth.contract(address=address, abi=self.rc_abi['abi'])
-					transaction = self.web4.eth.get_transaction(tx)
-					function = {}
-					try:
-						contract_router = self.web4.eth.contract(address=address, abi=self.abi['abi'])
-						decoded_input = contract_router.decode_function_input(transaction.input)
-						func = decoded_input[0]
-						func_data = decoded_input[1]
-						function["fn_name"] = func.__dict__['fn_name']
-						for k, v in func_data.items():
-							if not isinstance(v, list):
-								function[k] = str(v)
-							else:
-								function[k] = ','.join(v)
-					except Exception as e:
-						self.logger.critical(f"Worker {thread} {xquery_name} Failed to get function data for TX {tx}")
-						# self.logger.critical(f"Worker {thread} {xquery_name} Failed to get function data for TX {tx}",exc_info=True)
-
 					blockNumber = event['blockNumber']
 
 					retries = 0
@@ -218,51 +270,41 @@ class EventHandler:
 					timestamp = self.blockTime[blockNumber]
 
 					try:
-						contract_call = getattr(contract,f'{xquery_type.lower()}s')
-						action_call = getattr(contract_call,xquery_name.lower().capitalize())
-						swap_events = action_call().processLog(event)
-						swap_events = json.loads(Web3.toJSON(swap_events))
-						swap_events['chain_name'] = self.chain_name.split('_')[0]
-						swap_events['query_name'] = xquery_name
-						swap_events['tx_hash'] = tx
-						swap_events['timestamp'] = timestamp
-						swap_events['blocknumber'] = int(blockNumber)
-						for arg in list(swap_events['args']):
-							swap_events[arg] = swap_events['args'][arg]
-						del swap_events['args']
-						try:
-							if xquery_name == 'Swap':
-								tokens = self.get_tokens_from_caddress(swap_events['address'])
-								for key, item in tokens.items():
-									for key1, item1 in item.items():
-										swap_events[f'{key}_{key1}'] = item1
-								#check side
-								if swap_events['amount0Out'] == 0:
-									swap_events['side'] = 'sell'
-								elif swap_events['amount1Out'] == 0:
-									swap_events['side'] = 'buy'
-								#check address filter
-								for address in self.address:
-									for key, item in swap_events.items():
-										if item == address['address']:
-											swap_events['address_filter'] = address['name']
-											break
-									break
-							else:
-								swap_events['token0_name'] = contract.functions.name().call()
-								swap_events['token0_symbol'] = contract.functions.symbol().call()
-								swap_events['token0_decimals'] = contract.functions.decimals().call()
-							for k, v in function.items():
-								swap_events[f'{k}'] = v
-						except Exception as e:
-							self.logger.critical('Exception ',exc_info=True)
-						if 'address_filter' in list(swap_events):
-							self.logger.info(f"Worker {thread} Type: {xquery_type} Name: {xquery_name}")
-							zmq_handler.insert_queue([swap_events])
-						# else:
-						# 	self.queue.task_done()
+						#process event
+						xquery_event = self.process_event(thread, self.web4, event, xquery_name, xquery_type, address, self.rc_abi['abi'])
+
+						xquery_event['chain_name'] = self.chain_name.split('_')[0]
+						xquery_event['query_name'] = xquery_name
+						xquery_event['tx_hash'] = tx
+						xquery_event['timestamp'] = timestamp
+						xquery_event['blocknumber'] = int(blockNumber)
+					
+						#process args
+						args = self.process_event_args(thread, self.web4, xquery_name, xquery_event, address, self.rc_abi['abi'])
+						for k, v in args.items():
+							xquery_event[f'{k}'] = v
+
+						#check address filter
+						address_filter = self.get_address_filter(xquery_event)
+						if address_filter:
+							xquery_event['address_filter'] = address_filter['name']
+						
+						#get function
+						function = self.get_function(thread, self.web4, xquery_name, tx, address, self.abi['abi'])
+						if len(list(function)) == 0:
+							function = self.get_function(thread, self.web4, xquery_name, tx, address, self.rc_abi['abi'])
+							if len(list(function)) == 0 and address_filter!=None:
+								function = self.get_function(thread, self.web4, xquery_name, tx, address_filter['address'], self.abi['abi'])
+						for k, v in function.items():
+							xquery_event[f'{k}'] = v
+						
+						#add to db only if event belongs to a router
+						if 'address_filter' in list(xquery_event):
+							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
+							self.logger.info(f"SUCCESS Worker {thread} QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
+							zmq_handler.insert_queue([xquery_event])
 					except Exception as e:
-						self.logger.critical("Exception: ",exc_info=True)
+						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
 					self.queue.task_done()
 			except Exception as e:
 				self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
