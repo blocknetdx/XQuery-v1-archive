@@ -34,8 +34,10 @@ def main():
 
         logger.info('Frontend listening on port {}'.format(FRONTEND_PORT))
 
-        backend = context.socket(zmq.PUSH)
+        # backend = context.socket(zmq.PUSH)
+        backend = context.socket(zmq.PUB)
         backend.set_hwm(0)
+        backend.setsockopt(zmq.LINGER, 0)
         backend.bind("tcp://*:{}".format(BACKEND_PORT))
         logger.info('Backend listening on port {}'.format(BACKEND_PORT))
 

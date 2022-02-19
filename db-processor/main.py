@@ -29,7 +29,9 @@ logger = logging.getLogger('main.py')
 @db_session
 def main(xquery_yaml_order):
 	context = zmq.Context()
-	socket = context.socket(zmq.PULL)
+	# socket = context.socket(zmq.PULL)
+	socket = context.socket(zmq.SUB)
+	socket.setsockopt_string(zmq.SUBSCRIBE, "")
 	socket.set_hwm(0)
 
 	logger.info('Connecting...')
