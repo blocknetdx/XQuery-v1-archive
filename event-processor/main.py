@@ -76,8 +76,10 @@ def main():
 					ping_handler.start()
 
 					for i in range(0, WORKER_THREADS):
-						futures.append(executor.submit(event_handler.queue_handler, thread=i))
-					futures.append(executor.submit(event_handler.back_loop, thread="00"))
+						if i == 1:
+							futures.append(executor.submit(event_handler.back_loop, thread=i))
+						else:	
+							futures.append(executor.submit(event_handler.queue_handler, thread=i))
 					event_handler.loop()
 
 					executor._threads.clear()  
