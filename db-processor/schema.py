@@ -28,27 +28,32 @@ def yaml_from_abi():
 	try:
 		data = concat_abis()
 		inputs = []
-		inputs.append({'name':'id','value':'PrimaryKey(int, auto=True)'})
+		inputs.append({'name':'id','value':"PrimaryKey(Decimal, precision=1000, auto=True)"})
 		inputs.append({'name':'xquery_chain_name','value':'Required(str)'})
 		inputs.append({'name':'xquery_query_name','value':'Required(str)'})
-		inputs.append({'name':'xquery_timestamp','value':'Required(int)'})
-		inputs.append({'name':'xquery_xhash','value':'Required(str)'})
+		inputs.append({'name':'xquery_timestamp','value':"Required(Decimal, precision=1000)"})
+		inputs.append({'name':'xquery_xhash','value':'Required(str, unique=True)'})
 		inputs.append({'name':'xquery_tx_hash','value':'Required(str)'})
+		inputs.append({'name':'xquery_blocknumber','value':"Required(Decimal, precision=1000)"})
 		inputs.append({'name':'xquery_token0_name','value':'Optional(str)'})
 		inputs.append({'name':'xquery_token0_symbol','value':'Optional(str)'})
-		inputs.append({'name':'xquery_token0_decimals','value':'Optional(str)'})
+		inputs.append({'name':'xquery_token0_decimals','value':"Optional(Decimal, precision=1000)"})
 		inputs.append({'name':'xquery_token1_name','value':'Optional(str)'})
 		inputs.append({'name':'xquery_token1_symbol','value':'Optional(str)'})
-		inputs.append({'name':'xquery_token1_decimals','value':'Optional(str)'})
+		inputs.append({'name':'xquery_token1_decimals','value':"Optional(Decimal, precision=1000)"})
 		inputs.append({'name':'xquery_side','value':'Optional(str)'})
 		inputs.append({'name':'xquery_address_filter','value':'Optional(str)'})
-		inputs.append({'name':'xquery_blocknumber','value':'Optional(int)'})
 		inputs.append({'name':'xquery_fn_name','value':'Optional(str)'})
 		for i in data:
 			if i['type'].lower() in ['event','function']:
 				for k in i['inputs']:
 					name = k['name']
-					val = 'Optional(str)'
+					if 'int' in k['type']:
+						val = "Optional(Decimal, precision=1000)"
+					# elif 'bool' in k['type']:
+					# 	val = 'Optional(bool)'
+					else:
+						val = 'Optional(str)'
 					if name == '':
 						name = 'xquery_none'
 					if '_' not in name:

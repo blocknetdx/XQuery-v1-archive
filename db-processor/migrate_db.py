@@ -66,6 +66,28 @@ def not_required_column(table, name):
 	except Exception as e:
 		print(f'NOT_REQUIRED {table} {name}\n{e}')
 
+def numeric_precision(table, name):
+	try:
+		conn = db.connect(host=host, database=database, user=user, password=password)
+		conn.autocommit = True
+		cursor = conn.cursor()
+		cursor.execute(f'ALTER TABLE {table} ALTER {name} SET DATA TYPE DECIMAL(1000)')
+		conn.close()
+		print(f'DECIMAL PRECISION {table} - {name}')
+	except Exception as e:
+		print(f'DECIMAL PRECISION {table} {name}\n{e}')
+
+def set_required_column(table, name):
+	try:
+		conn = db.connect(host=host, database=database, user=user, password=password)
+		conn.autocommit = True
+		cursor = conn.cursor()
+		cursor.execute(f'ALTER TABLE {table} ALTER COLUMN {name} SET NOT NULL')
+		conn.close()
+		print(f'SET_REQUIRED {table} - {name}')
+	except Exception as e:
+		print(f'SET_REQUIRED {table} {name}\n{e}')
+
 def add_column(table, name, data_type):
 	try:
 		conn = db.connect(host=host, database=database, user=user, password=password)
@@ -103,13 +125,17 @@ if __name__ == '__main__':
 		data_type = entry[1].split('(')[1].split(')')[0].strip()
 		not_required = True if entry[1].split('(')[0].strip()=='Optional' else False
 		column_name = entry[0].strip()
-		if data_type == 'str':
+		if 'str' in data_type.lower():
 			data_type = 'text'
-		elif data_type == 'int':
-			data_type = 'bigint'
-		elif data_type == 'float':
-			data_type = 'float8'
+		elif 'decimal' in data_type.lower():
+			data_type = 'DECIMAL'
+		elif 'bool' in data_type.lower():
+			data_type = 'boolean'	
 		add_column(table_name, column_name, data_type)
+		if data_type == 'DECIMAL':
+			numeric_precision(table_name, column_name)
 		if not_required:
 			not_required_column(table_name, column_name)
+		else:
+			set_required_column(table_name, column_name)
 	del_column(table_name, '_data')

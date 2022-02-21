@@ -21,10 +21,11 @@ def load_schema():
 		for i in xquery_data[0]['classes']:
 			for j in i['attributes']:
 				if "Required" not in j['value']:
-					order.append(j['name'])
+					order.append([j['name'],j['value']])
 	return order
 
 logger = logging.getLogger('main.py')
+
 
 @db_session
 def main(xquery_yaml_order):
@@ -59,19 +60,30 @@ def main(xquery_yaml_order):
 							xquery_chain_name = message['chain_name'],
 							xquery_timestamp = int(message['timestamp']),
 							xquery_tx_hash = message['tx_hash'],
-							xquery_xhash = message['xhash']
+							xquery_xhash = message['xhash'],
+							xquery_blocknumber = int(message['blocknumber'])
 							)
 					
 						for o in xquery_yaml_order:
 							for name, value in message.items():
-								if o == f'xquery_{name.lower()}' and name.lower() not in ['query_name','chain_name','tx_hash','timestamp','xhash']:
-									v = str(value)
-									if o == 'xquery_timestamp':
-										v = int(v)
-									d = {f'xquery_{name.lower()}':v}
-					
-									item.set(**d)
-				
+								if o[0] == f'xquery_{name.lower()}' and name.lower() not in ['query_name','blocknumber','chain_name','tx_hash','timestamp','xhash']:
+									if value and value !='':
+										if 'str' in o[1].lower():
+											v = str(value)
+										elif 'decimal' in o[1].lower():
+											v = int(str(value),0)
+										elif 'bool' in o[1].lower():
+											if value.lower() in ['true','t']:
+												v = True
+											else:
+												v = False
+										d = {f'xquery_{name.lower()}':v}
+										item.set(**d)
+						parsed = item.to_dict()
+						for o in xquery_yaml_order:
+							if o[0] not in list(parsed):
+								d = {o[0]:None}
+								item.set(**d)
 						commit()
 						logger.info(f'LOGGED QUERY:{message["query_name"]} XHASH:{message["xhash"]} TX:{message["tx_hash"]}')
 					except Exception as e:

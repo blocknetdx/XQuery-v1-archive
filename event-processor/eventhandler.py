@@ -10,6 +10,7 @@ import logging
 import hashlib
 
 token_data = dict()
+coin_data = dict()
 
 class EventHandler:
 	def __init__(self, web2: Web3, web3: Web3, web4: Web3, latest_block):
@@ -93,15 +94,33 @@ class EventHandler:
 
 	#get token details from address
 	def get_token_data(self, w3, address, abi):
-		contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
-		name = contract.functions.name().call()
-		symbol = contract.functions.symbol().call()
-		decimals = contract.functions.decimals().call()
-		return {
-		"name": str(name),
-		"symbol": str(symbol),
-		"decimals": str(decimals)
-		}
+		global coin_data
+		if address in coin_data:
+			return coin_data[address]
+		else:
+			contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
+			name = None
+			symbol = None
+			decimals = None
+			try:
+				name = contract.functions.name().call()
+			except Exception as e:
+				self.logger.critical(f'No name for contract {address}')
+			try:
+				symbol = contract.functions.symbol().call()
+			except Exception as e:
+				self.logger.critical(f'No symbol for contract {address}')
+			try:
+				decimals = contract.functions.decimals().call()
+			except Exception as e:
+				self.logger.critical(f'No decimals for contract {address}')
+			d =	{
+			"name": str(name) if name else None,
+			"symbol": str(symbol) if symbol else None,
+			"decimals": int(decimals) if decimals else None
+			}
+			coin_data[address] = d
+			return d
 
 	#get pair details from contract address
 	def get_tokens_from_caddress(self, w3, contract_address, abi):
@@ -144,6 +163,7 @@ class EventHandler:
 				else:
 					function[k] = ','.join(v)
 		except Exception as e:
+			# pass
 			self.logger.critical(f'Exception get_function {thread} {event_name} {tx} {contract_address}')
 		return function
 
@@ -197,15 +217,29 @@ class EventHandler:
 
 		while self.running and self.errors < 2:
 			try:
+				self.logger.info(f'{self.chain_name} latest')
 				forward_filter = self.web3.eth.filter({
 					'toBlock': 'latest'
 				})
 				for event in forward_filter.get_new_entries():
 					self.queue.put(event)
+				time.sleep(0.01)
+			except ValueError as e:
+				self.logger.critical('ValueError in Listener loop!',exc_info=True)
+			except Exception as e:
+				self.logger.critical('Exception in Listener loop!',exc_info=True)
+				self.errors += 0.2
+				if self.errors > 2:
+					self.running = False
 
-				#backward loop events
+	def back_loop(self):
+		self.logger.info('Starting back listener...')
+
+		while self.running and self.errors < 2:
+			try:
 				if self.start_block != 'None':
 					if self.current_block>self.start_block:
+						self.logger.info(f'{self.chain_name} {self.current_block}')
 						backward_filter = self.web3.eth.filter({
 								'fromBlock': hex(int(self.current_block)-1),
 								'toBlock': hex(int(self.current_block)),
@@ -216,10 +250,6 @@ class EventHandler:
 				time.sleep(0.01)
 			except ValueError as e:
 				self.logger.critical('ValueError in Listener loop!',exc_info=True)
-				
-				forward_filter = self.web3.eth.filter({
-					'toBlock': 'latest',
-				})
 			except Exception as e:
 				self.logger.critical('Exception in Listener loop!',exc_info=True)
 				self.errors += 0.2

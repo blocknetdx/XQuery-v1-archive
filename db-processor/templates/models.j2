@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pony.orm import *
 from db import db
 import http.client
@@ -10,6 +11,7 @@ class {{ class.name }}(db.Entity):
   {% for attrib in class.attributes %}
   {{ attrib.name }} = {{ attrib.value | replace("lambda","lambda:") }}
   {% endfor %}
+  composite_index(xquery_tx_hash, xquery_xhash, xquery_chain_name, xquery_blocknumber)
 
 {% endfor %}
 

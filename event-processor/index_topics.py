@@ -31,7 +31,7 @@ def get_dict(abi):
 	}
 	for i in abi:
 		if 'inputs' in list(i):
-			if len(i['inputs'])>0 and i['type'].lower() == 'function' or i['type'].lower() == 'event':
+			if len(i['inputs'])>0 and i['type'].lower() in ['function','event']:
 				name, inputs = get_combo(i)
 				topic = get_topic(name, inputs)
 				# print(f'{name} {topic}')
