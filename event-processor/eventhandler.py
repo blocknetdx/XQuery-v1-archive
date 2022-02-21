@@ -232,9 +232,8 @@ class EventHandler:
 				if self.errors > 2:
 					self.running = False
 
-	def back_loop(self):
-		self.logger.info('Starting back listener...')
-
+	def back_loop(self, thread):
+		self.logger.info(f'{thread} Starting back listener...')
 		while self.running and self.errors < 2:
 			try:
 				if self.start_block != 'None':
@@ -247,11 +246,13 @@ class EventHandler:
 						for event in backward_filter.get_all_entries():
 							self.queue.put(event)
 						self.current_block = self.current_block - 2 if self.current_block > self.start_block else self.start_block
+				else:
+					break
 				time.sleep(0.01)
 			except ValueError as e:
-				self.logger.critical('ValueError in Listener loop!',exc_info=True)
+				self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
 			except Exception as e:
-				self.logger.critical('Exception in Listener loop!',exc_info=True)
+				self.logger.critical('Exception in Back Listener loop!',exc_info=True)
 				self.errors += 0.2
 				if self.errors > 2:
 					self.running = False

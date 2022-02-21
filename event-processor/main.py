@@ -77,7 +77,7 @@ def main():
 
 					for i in range(0, WORKER_THREADS):
 						futures.append(executor.submit(event_handler.queue_handler, thread=i))
-
+					futures.append(executor.submit(event_handler.back_loop, thread=i))
 					event_handler.loop()
 
 					executor._threads.clear()  
