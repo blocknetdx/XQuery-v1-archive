@@ -44,8 +44,8 @@ def main():
 
         while True:
             try:
-                if len(txs) >= 500:
-                    txs = txs[500:]
+                if len(txs) >= 1000:
+                    txs = txs[1000:]
 
                 try:
                     for connection in connections.copy():
