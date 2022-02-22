@@ -223,7 +223,7 @@ class EventHandler:
 					'fromBlock': hex(latest_block-1),
 					'toBlock': hex(latest_block)
 				})
-				for event in forward_filter.get_new_entries():
+				for event in forward_filter.get_all_entries():
 					self.queue.put(event)
 				time.sleep(0.01)
 			except ValueError as e:
