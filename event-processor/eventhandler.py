@@ -109,15 +109,18 @@ class EventHandler:
 			try:
 				name = contract.functions.name().call()
 			except Exception as e:
-				self.logger.critical(f'No name for contract {address}')
+				pass
+				# self.logger.critical(f'No name for contract {address}')
 			try:
 				symbol = contract.functions.symbol().call()
 			except Exception as e:
-				self.logger.critical(f'No symbol for contract {address}')
+				pass
+				# self.logger.critical(f'No symbol for contract {address}')
 			try:
 				decimals = contract.functions.decimals().call()
 			except Exception as e:
-				self.logger.critical(f'No decimals for contract {address}')
+				pass
+				# self.logger.critical(f'No decimals for contract {address}')
 			d =	{
 			"name": str(name) if name else None,
 			"symbol": str(symbol) if symbol else None,
@@ -167,8 +170,8 @@ class EventHandler:
 				else:
 					function[k] = ','.join(v)
 		except Exception as e:
-			# pass
-			self.logger.critical(f'Exception get_function {thread} {event_name} {tx} {contract_address}')
+			pass
+			# self.logger.critical(f'Exception get_function {thread} {event_name} {tx} {contract_address}')
 		return function
 
 	def process_event(self, thread, w3, event, event_name, event_type, contract_address, abi):
@@ -180,7 +183,8 @@ class EventHandler:
 			xquery_event = action_call().processLog(event)
 			xquery_event = json.loads(Web3.toJSON(xquery_event))
 		except Exception as e:
-			self.logger.critical(f'Exception process_event {thread} {event_name} {event_type} {contract_address}',exc_info=True)			
+			pass
+			# self.logger.critical(f'Exception process_event {thread} {event_name} {event_type} {contract_address}',exc_info=True)			
 		return xquery_event
 
 	def process_event_args(self, thread, w3, xquery_name, xquery_event, contract_address, abi):
@@ -208,7 +212,8 @@ class EventHandler:
 				args['token0_symbol'] = token_data['symbol']
 				args['token0_decimals'] = token_data['decimals']
 		except Exception as e:
-			self.logger.critical(f"Exception process_event_args {thread} {xquery_name} {contract_address}",exc_info=True)
+			pass
+			# self.logger.critical(f"Exception process_event_args {thread} {xquery_name} {contract_address}",exc_info=True)
 		return args
 
 	#listen loop for incoming events | backward listner
@@ -227,7 +232,7 @@ class EventHandler:
 					self.queue.put(event)
 				current_block = self.get_latest_block()
 				if latest_block < current_block:
-					latest_block += 1
+					latest_block += 2
 				else:
 					latest_block = current_block
 				time.sleep(0.01)
@@ -297,7 +302,8 @@ class EventHandler:
 							if 'timestamp' in timestamp:
 								self.blockTime[blockNumber] = timestamp['timestamp']
 						except Exception as e:
-							self.logger.critical('Exception while waiting for block time!', exc_info=True)
+							pass
+							# self.logger.critical('Exception while waiting for block time!', exc_info=True)
 
 						if retries > 10:
 							break
