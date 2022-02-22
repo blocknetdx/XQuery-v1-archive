@@ -223,7 +223,7 @@ class EventHandler:
 		latest_block = self.current_block_forward
 		while self.running and self.errors < 2:
 			try:
-				self.logger.info(f'{self.chain_name} {latest_block}')
+				self.logger.info(f'{self.chain_name} {latest_block} FORWARD')
 				forward_filter = self.web2.eth.filter({
 					'fromBlock': hex(latest_block-1),
 					'toBlock': hex(latest_block)
@@ -253,7 +253,7 @@ class EventHandler:
 			try:
 				if self.start_block != 'None':
 					if self.current_block>self.start_block:
-						self.logger.info(f'{self.chain_name} {self.current_block}')
+						self.logger.info(f'{self.chain_name} {self.current_block} BACKWARD')
 						backward_filter = self.web3.eth.filter({
 								'fromBlock': hex(int(self.current_block)-1),
 								'toBlock': hex(int(self.current_block)),
