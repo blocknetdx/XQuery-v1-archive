@@ -30,6 +30,7 @@ class EventHandler:
 		self.address = self.get_address_filter_input()
 		self.latest_block = self.get_latest_block()
 		self.current_block = self.latest_block
+		self.current_block_forward = self.latest_block
 		self.start_block = self.load_start_block()
 		self.running = True
 		self.errors = 0
@@ -214,10 +215,9 @@ class EventHandler:
 	def loop(self):
 		self.logger.info('Starting listener...')
 		
-
+		latest_block = self.current_block_forward
 		while self.running and self.errors < 2:
 			try:
-				latest_block = self.get_latest_block()
 				self.logger.info(f'{self.chain_name} {latest_block}')
 				forward_filter = self.web3.eth.filter({
 					'fromBlock': hex(latest_block-1),
@@ -225,10 +225,17 @@ class EventHandler:
 				})
 				for event in forward_filter.get_all_entries():
 					self.queue.put(event)
+				current_block = self.get_latest_block()
+				if latest_block < current_block:
+					latest_block += 1
+				else:
+					latest_block = current_block
 				time.sleep(0.01)
 			except ValueError as e:
+				latest_block = self.get_latest_block()
 				self.logger.critical('ValueError in Listener loop!',exc_info=True)
 			except Exception as e:
+				latest_block = self.get_latest_block()
 				self.logger.critical('Exception in Listener loop!',exc_info=True)
 				self.errors += 0.2
 				if self.errors > 2:
