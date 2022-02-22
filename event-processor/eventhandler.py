@@ -13,7 +13,7 @@ token_data = dict()
 coin_data = dict()
 
 class EventHandler:
-	def __init__(self, web2: Web3, web3: Web3, web4: Web3, latest_block):
+	def __init__(self, web2: Web3, web3: Web3, web4: Web3):
 		self.logger = logging.getLogger("EventHandler")
 		self.chain_name = os.environ.get('NAME','AVAX')
 		self.web2 = web2
@@ -28,11 +28,14 @@ class EventHandler:
 		self.rc_abi = self.load_rc_abi()
 		self.topics = self.get_topics_for_query()
 		self.address = self.get_address_filter_input()
-		self.latest_block = int(latest_block) if latest_block.isdigit() else latest_block
-		self.current_block = int(latest_block) if latest_block.isdigit() else int(latest_block)
+		self.latest_block = self.get_latest_block()
+		self.current_block = self.latest_block
 		self.start_block = self.load_start_block()
 		self.running = True
 		self.errors = 0
+
+	def get_latest_block(self):
+		return int(self.web4.eth.block_number)
 
 	#load start_block if any
 	def load_start_block(self):
@@ -210,16 +213,15 @@ class EventHandler:
 	#listen loop for incoming events | backward listner
 	def loop(self):
 		self.logger.info('Starting listener...')
-
-		forward_filter = self.web3.eth.filter({
-			'toBlock': 'latest'
-		})
+		
 
 		while self.running and self.errors < 2:
 			try:
-				self.logger.info(f'{self.chain_name} latest')
+				latest_block = self.get_latest_block()
+				self.logger.info(f'{self.chain_name} {latest_block}')
 				forward_filter = self.web3.eth.filter({
-					'toBlock': 'latest'
+					'fromBlock': hex(latest_block-1),
+					'toBlock': hex(latest_block)
 				})
 				for event in forward_filter.get_new_entries():
 					self.queue.put(event)

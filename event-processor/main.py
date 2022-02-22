@@ -60,10 +60,10 @@ def main():
 
 				w4 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
 				w4.middleware_onion.inject(geth_poa_middleware, layer=0)
-				LATEST_BLOCK = str(w4.eth.getBlock('latest').number)
+				# LATEST_BLOCK = str(w4.eth.getBlock('latest').number)
 
 				logger.info('Starting Loop...')
-				event_handler = EventHandler(w2, w3, w4, LATEST_BLOCK)
+				event_handler = EventHandler(w2, w3, w4)
 
 				try:
 					ping_handler = PingHandler(zmq_handler)
@@ -101,7 +101,7 @@ def main():
 					# sys.exit(1)
 
 		except Exception as e:
-			logger.info(f"Something went wrong when calling {CHAIN_NAME} host...")
+			logger.critical(f"Something went wrong when calling {CHAIN_NAME} host...",exc_info=True)
 
 
 	
