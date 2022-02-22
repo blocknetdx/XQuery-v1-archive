@@ -36,7 +36,7 @@ class EventHandler:
 		self.errors = 0
 
 	def get_latest_block(self):
-		return int(self.web4.eth.block_number)
+		return int(self.web2.eth.block_number)
 
 	#load start_block if any
 	def load_start_block(self):
@@ -224,15 +224,16 @@ class EventHandler:
 		while self.running and self.errors < 2:
 			try:
 				self.logger.info(f'{self.chain_name} {latest_block}')
-				forward_filter = self.web3.eth.filter({
+				forward_filter = self.web2.eth.filter({
 					'fromBlock': hex(latest_block-1),
 					'toBlock': hex(latest_block)
 				})
 				for event in forward_filter.get_all_entries():
 					self.queue.put(event)
+				self.web2.eth.uninstall_filter(forward_filter.filter_id)
 				current_block = self.get_latest_block()
 				if latest_block < current_block:
-					latest_block += 2
+					latest_block += 1
 				else:
 					latest_block = current_block
 				time.sleep(0.01)
@@ -253,12 +254,13 @@ class EventHandler:
 				if self.start_block != 'None':
 					if self.current_block>self.start_block:
 						self.logger.info(f'{self.chain_name} {self.current_block}')
-						backward_filter = self.web3.eth.filter({
+						backward_filter = self.web2.eth.filter({
 								'fromBlock': hex(int(self.current_block)-1),
 								'toBlock': hex(int(self.current_block)),
 							})
 						for event in backward_filter.get_all_entries():
 							self.queue.put(event)
+						self.web2.eth.uninstall_filter(backward_filter.filter_id)
 						self.current_block = self.current_block - 2 if self.current_block > self.start_block else self.start_block
 				else:
 					break
