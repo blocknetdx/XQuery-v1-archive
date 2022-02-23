@@ -28,15 +28,18 @@ class EventHandler:
 		self.rc_abi = self.load_rc_abi()
 		self.topics = self.get_topics_for_query()
 		self.address = self.get_address_filter_input()
-		self.latest_block = self.get_latest_block()
+		self.get_latest_block()
 		self.current_block = self.latest_block
 		self.current_block_forward = self.latest_block
 		self.start_block = self.load_start_block()
+		self.lock_forward = False
+		self.lock_backward = False
+		self.back_running = True
 		self.running = True
 		self.errors = 0
 
 	def get_latest_block(self):
-		return int(self.web4.eth.block_number)
+		self.latest_block = int(self.web4.eth.block_number)-1
 
 	#load start_block if any
 	def load_start_block(self):
@@ -216,62 +219,68 @@ class EventHandler:
 			# self.logger.critical(f"Exception process_event_args {thread} {xquery_name} {contract_address}",exc_info=True)
 		return args
 
+	def control_loop(self):
+		while self.running and self.errors <2:
+			time.sleep(1)
+
 	#listen loop for incoming events | backward listner
-	def loop(self):
-		self.logger.info('Starting listener...')
+	def forward_loop(self, thread):
+		self.logger.info(f'{thread} Starting forward listener...')
 		
-		latest_block = self.current_block_forward
 		while self.running and self.errors < 2:
-			try:
-				self.logger.info(f'{self.chain_name} {latest_block} FORWARD')
-				forward_filter = self.web2.eth.filter({
-					'fromBlock': hex(latest_block-1),
-					'toBlock': hex(latest_block)
-				})
-				for event in forward_filter.get_all_entries():
-					self.queue.put(event)
-				self.web2.eth.uninstall_filter(forward_filter.filter_id)
-				current_block = self.get_latest_block()
-				if latest_block < current_block:
-					latest_block += 1
-				else:
-					latest_block = current_block
-				time.sleep(0.01)
-			except ValueError as e:
-				latest_block = self.get_latest_block()
-				self.logger.critical('ValueError in Listener loop!',exc_info=True)
-			except Exception as e:
-				latest_block = self.get_latest_block()
-				self.logger.critical('Exception in Listener loop!',exc_info=True)
-				self.errors += 0.2
-				if self.errors > 2:
-					self.running = False
+			if not self.lock_forward:
+				try:
+					self.logger.info(f'{thread} {self.chain_name} {self.current_block_forward} FORWARD')
+					forward_filter = self.web2.eth.filter({
+						'fromBlock': hex(self.current_block_forward-1),
+						'toBlock': hex(self.current_block_forward)
+					})
+					for event in forward_filter.get_all_entries():
+						self.queue.put(event)
+					self.web2.eth.uninstall_filter(forward_filter.filter_id)
+					self.lock_forward = True
+					self.get_latest_block()
+					self.current_block_forward = self.current_block_forward + 1 if self.current_block_forward < self.latest_block else self.latest_block
+					self.lock_forward = False
+					time.sleep(0.01)
+				except ValueError as e:
+					# self.get_latest_block()
+					self.logger.critical('ValueError in Listener loop!',exc_info=True)
+				except Exception as e:
+					# self.get_latest_block()
+					self.logger.critical('Exception in Listener loop!',exc_info=True)
+					self.errors += 0.2
+					if self.errors > 2:
+						self.running = False
 
 	def back_loop(self, thread):
 		self.logger.info(f'{thread} Starting back listener...')
-		while self.running and self.errors < 2:
-			try:
-				if self.start_block != 'None':
-					if self.current_block>self.start_block:
-						self.logger.info(f'{self.chain_name} {self.current_block} BACKWARD')
-						backward_filter = self.web3.eth.filter({
-								'fromBlock': hex(int(self.current_block)-1),
-								'toBlock': hex(int(self.current_block)),
-							})
-						for event in backward_filter.get_all_entries():
-							self.queue.put(event)
-						self.web3.eth.uninstall_filter(backward_filter.filter_id)
-						self.current_block = self.current_block - 2 if self.current_block > self.start_block else self.start_block
-				else:
-					break
-				time.sleep(0.01)
-			except ValueError as e:
-				self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
-			except Exception as e:
-				self.logger.critical('Exception in Back Listener loop!',exc_info=True)
-				self.errors += 0.2
-				if self.errors > 2:
-					self.running = False
+		while self.back_running and self.errors < 2:
+			if not self.lock_backward:
+				try:
+					if self.start_block != 'None':
+						if self.current_block>self.start_block:
+							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
+							backward_filter = self.web2.eth.filter({
+									'fromBlock': hex(int(self.current_block)-1),
+									'toBlock': hex(int(self.current_block)),
+								})
+							for event in backward_filter.get_all_entries():
+								self.queue.put(event)
+							self.web2.eth.uninstall_filter(backward_filter.filter_id)
+							self.lock_backward = True
+							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+							self.lock_backward = False
+					else:
+						self.back_running = False
+					time.sleep(0.01)
+				except ValueError as e:
+					self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
+				except Exception as e:
+					self.logger.critical('Exception in Back Listener loop!',exc_info=True)
+					self.errors += 0.2
+					if self.errors > 2:
+						self.back_running = False
 
 	def queue_handler(self, thread):
 		self.logger.info('Starting Worker: {}'.format(thread))
@@ -349,7 +358,7 @@ class EventHandler:
 						#add to db only if event belongs to a router
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
-							self.logger.info(f"SUCCESS Worker {thread} QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
+							self.logger.info(f"{thread} SUCCESS QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
 							zmq_handler.insert_queue([xquery_event])
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
