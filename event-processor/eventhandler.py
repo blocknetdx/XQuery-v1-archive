@@ -362,7 +362,7 @@ class EventHandler:
 							zmq_handler.insert_queue([xquery_event])
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
-					self.queue.task_done()
+				self.queue.task_done()
 			except Exception as e:
 				self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
 
