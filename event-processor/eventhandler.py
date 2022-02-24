@@ -8,9 +8,7 @@ import yaml
 import json
 import logging
 import hashlib
-
-token_data = dict()
-coin_data = dict()
+import global_vars
 
 class EventHandler:
 	def __init__(self, web2: Web3, web3: Web3, web4: Web3):
@@ -29,7 +27,7 @@ class EventHandler:
 		self.topics = self.get_topics_for_query()
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
-		self.current_block = self.latest_block
+		self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
 		self.current_block_forward = self.latest_block
 		self.start_block = self.load_start_block()
 		self.lock_forward = False
@@ -101,9 +99,8 @@ class EventHandler:
 
 	#get token details from address
 	def get_token_data(self, w3, address, abi):
-		global coin_data
-		if address in coin_data:
-			return coin_data[address]
+		if address in global_vars.coin_data:
+			return global_vars.coin_data[address]
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
 			name = None
@@ -129,14 +126,13 @@ class EventHandler:
 			"symbol": str(symbol) if symbol else None,
 			"decimals": int(decimals) if decimals else None
 			}
-			coin_data[address] = d
+			global_vars.coin_data[address] = d
 			return d
 
 	#get pair details from contract address
 	def get_tokens_from_caddress(self, w3, contract_address, abi):
-		global token_data
-		if contract_address in token_data:
-			return token_data[contract_address]
+		if contract_address in global_vars.token_data:
+			return global_vars.token_data[contract_address]
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address),abi=abi)
 			token0_address = contract.functions.token0().call()
@@ -147,7 +143,7 @@ class EventHandler:
 			'token0': token0,
 			'token1': token1
 			}
-			token_data[contract_address] = data
+			global_vars.token_data[contract_address] = data
 			return data
 
 	def get_address_filter(self, xquery_event):
@@ -270,6 +266,7 @@ class EventHandler:
 							self.web2.eth.uninstall_filter(backward_filter.filter_id)
 							self.lock_backward = True
 							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+							global_vars.backblock_progress = self.current_block
 							self.lock_backward = False
 					else:
 						self.back_running = False

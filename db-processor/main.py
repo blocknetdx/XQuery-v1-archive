@@ -48,7 +48,7 @@ def main(xquery_yaml_order):
 			try:
 				j = ujson.loads(msg)
 			except Exception as e:
-				logger.critical("Exception ujson: ",exc_info=True)
+				logger.critical("Exception ujson")
 				j = json.loads(msg)
 
 			if j['topic'] == 'trades':

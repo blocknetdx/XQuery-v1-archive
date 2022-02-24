@@ -29,9 +29,9 @@ services:
       backend:
         ipv4_address: {{ chain.ip }}
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
-        max-files: 5
+        max-file: 5
         max-size: 10m
 ####{{ chain.name.lower() }} STACK END
 
@@ -55,9 +55,9 @@ services:
       backend:
         ipv4_address: {{ gateway_processor_ip }}
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
-        max-files: 5
+        max-file: 5
         max-size: 10m
   db-processor:
     build: ./db-processor
@@ -86,9 +86,9 @@ services:
       backend:
         ipv4_address: {{ db_processor_ip }}
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
-        max-files: 5
+        max-file: 5
         max-size: 10m
   postgres:
     image: postgres:12
@@ -104,9 +104,9 @@ services:
       backend:
         ipv4_address: {{ postgres_ip }}
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
-        max-files: 5
+        max-file: 5
         max-size: 10m
   graphql-engine:
     image: hasura/graphql-engine:v2.0.10
@@ -126,9 +126,9 @@ services:
       backend:
         ipv4_address: {{ graphql_engine_ip }}
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
-        max-files: 5
+        max-file: 5
         max-size: 10m
   reverse-proxy:
     build: ./reverse-proxy

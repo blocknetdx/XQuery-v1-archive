@@ -3,6 +3,9 @@ import sys
 import time
 import signal
 import atexit
+import logging
+import hashlib
+import requests
 import concurrent.futures
 from concurrent.futures import thread
 from web3 import Web3
@@ -11,8 +14,8 @@ from engine.pinghandler import PingHandler
 from eventhandler import EventHandler
 from utils.zmq import zmq_handler
 from utils.liveness import *
-import logging
-import hashlib
+import global_vars
+
 
 logging.basicConfig(
 	level=logging.INFO,
@@ -32,6 +35,8 @@ atexit.register(on_exit)
 def main():
 	logger = logging.getLogger('main.py')
 	logger.info('Starting...')
+	logger.info('Initializing global_vars...')
+	global_vars.init()
 
 	zmq_handler.init()
 
@@ -39,6 +44,11 @@ def main():
 	WORKER_THREADS = int(os.environ.get('WORKER_THREADS', 20))
 
 	CHAIN_NAME = os.environ.get('NAME', 'ETH')
+
+	adapter = requests.adapters.HTTPAdapter(pool_connections=30, pool_maxsize=30)
+	session = requests.Session()
+	session.mount('http://', adapter)
+	session.mount('https://', adapter)
 	
 	while True:
 		try:
@@ -52,13 +62,13 @@ def main():
 			elif live == True:
 				logger.info(f'{CHAIN_NAME} node is live... Resuming')
 		
-				w2 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w2 = Web3(Web3.HTTPProvider(f'{CHAIN_HOST}', session=session, request_kwargs={'timeout': 60}))
 				w2.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-				w3 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w3 = Web3(Web3.HTTPProvider(f'{CHAIN_HOST}', session=session, request_kwargs={'timeout': 60}))
 				w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-				w4 = Web3(Web3.HTTPProvider('{}'.format(CHAIN_HOST)))
+				w4 = Web3(Web3.HTTPProvider(f'{CHAIN_HOST}', session=session, request_kwargs={'timeout': 60}))
 				w4.middleware_onion.inject(geth_poa_middleware, layer=0)
 				# LATEST_BLOCK = str(w4.eth.getBlock('latest').number)
 
