@@ -336,7 +336,9 @@ class EventHandler:
 				tx = event.transactionHash.hex()
 				address = event['address']
 				event_topics = event['topics']
-				main_topic = [x.hex() for x in event_topics][0]
+				if len(main_topic) > 0:
+					main_topic = [x.hex() for x in event_topics][0]
+				main_topic = None
 				event_hash = hashlib.sha256(json.dumps(Web3.toJSON(event), sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
 
 				if main_topic in self.topics and event_hash not in global_vars.events_cache:
