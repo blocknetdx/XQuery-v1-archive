@@ -8,7 +8,27 @@ import yaml
 import json
 import logging
 import hashlib
+import base64
 import global_vars
+import pickle5 as pickle
+import random
+
+def make_hash_sha256(o):
+	hasher = hashlib.sha256()
+	hasher.update(repr(make_hashable(o)).encode())
+	return base64.b64encode(hasher.digest()).decode()
+
+def make_hashable(o):
+	if isinstance(o, (tuple, list)):
+		return tuple((make_hashable(e) for e in o))
+
+	if isinstance(o, dict):
+		return tuple(sorted((k,make_hashable(v)) for k,v in o.items()))
+
+	if isinstance(o, (set, frozenset)):
+		return tuple(sorted(make_hashable(e) for e in o))
+
+	return o
 
 class EventHandler:
 	def __init__(self, web2: Web3, web3: Web3, web4: Web3):
@@ -27,12 +47,13 @@ class EventHandler:
 		self.topics = self.get_topics_for_query()
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
-		self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
-		self.current_block_forward = self.latest_block
 		self.start_block = self.load_start_block()
+		#self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
+		self.current_block_forward = self.latest_block if self.start_block=='None' else self.start_block	
 		self.lock_forward = False
-		self.lock_backward = False
-		self.back_running = True
+		# self.lock_backward = False
+		self.lock_queue = False
+		# self.back_running = True
 		self.running = True
 		self.errors = 0
 
@@ -99,8 +120,8 @@ class EventHandler:
 
 	#get token details from address
 	def get_token_data(self, w3, address, abi):
-		if address in global_vars.coin_data:
-			return global_vars.coin_data[address]
+		if address in global_vars.coin_data_cache:
+			return json.loads(pickle.loads(global_vars.coin_data_cache[address]))
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
 			name = None
@@ -121,18 +142,20 @@ class EventHandler:
 			except Exception as e:
 				pass
 				# self.logger.critical(f'No decimals for contract {address}')
-			d =	{
+			data =	{
 			"name": str(name) if name else None,
 			"symbol": str(symbol) if symbol else None,
 			"decimals": int(decimals) if decimals else None
 			}
-			global_vars.coin_data[address] = d
+			if len(global_vars.coin_data_cache.keys())>=100:
+				global_vars.coin_data_cache.pop(random.choice(global_vars.coin_data_cache.keys()))
+			global_vars.coin_data_cache[address] = pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5)
 			return d
 
 	#get pair details from contract address
 	def get_tokens_from_caddress(self, w3, contract_address, abi):
-		if contract_address in global_vars.token_data:
-			return global_vars.token_data[contract_address]
+		if contract_address in global_vars.token_data_cache:
+			return json.loads(pickle.loads(global_vars.token_data_cache[contract_address]))
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address),abi=abi)
 			token0_address = contract.functions.token0().call()
@@ -143,13 +166,15 @@ class EventHandler:
 			'token0': token0,
 			'token1': token1
 			}
-			global_vars.token_data[contract_address] = data
+			if len(global_vars.token_data_cache.keys())>=100:
+				global_vars.token_data_cache.pop(random.choice(global_vars.token_data_cache.keys()))
+			global_vars.token_data_cache[contract_address] = pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5)
 			return data
 
 	def get_address_filter(self, xquery_event):
 		for address in self.address:
 			for key, item in xquery_event.items():
-				if isinstance(item, str) and item in address['address']:
+				if isinstance(item, str) and address['address'] in item:
 					return address
 		return None
 
@@ -158,7 +183,15 @@ class EventHandler:
 		function = {}
 		transaction = w3.eth.get_transaction(tx)
 		try:
-			contract_router = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+			pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
+			if pb in global_vars.functions_cache:
+				contract_router = global_vars.functions_cache[pb]
+			else:
+				contract_router = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+				if len(global_vars.token_data_cache.keys())>=100:
+					global_vars.token_data_cache.pop(random.choice(global_vars.token_data_cache.keys()))
+				global_vars.functions_cache[pb] = contract_router
+
 			decoded_input = contract_router.decode_function_input(transaction.input)
 			func = decoded_input[0]
 			func_data = decoded_input[1]
@@ -176,7 +209,15 @@ class EventHandler:
 	def process_event(self, thread, w3, event, event_name, event_type, contract_address, abi):
 		xquery_event = {}
 		try:
-			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+			pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
+			if pb in global_vars.contracts_cache:
+				contract = global_vars.contracts_cache[pb]
+			else:
+				contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
+				global_vars.contracts_cache[pb] = contract
+				if len(global_vars.contracts_cache.keys())>=100:
+					global_vars.contracts_cache.pop(random.choice(global_vars.contracts_cache.keys()))
+				global_vars.functions_cache[pb] = contract_router
 			contract_call = getattr(contract,f'{event_type.lower()}s')
 			action_call = getattr(contract_call,event_name.lower().capitalize())
 			xquery_event = action_call().processLog(event)
@@ -249,35 +290,35 @@ class EventHandler:
 					if self.errors > 2:
 						self.running = False
 
-	def back_loop(self, thread):
-		self.logger.info(f'{thread} Starting back listener...')
-		while self.back_running and self.errors < 2:
-			if not self.lock_backward:
-				try:
-					if self.start_block != 'None':
-						if self.current_block>self.start_block:
-							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
-							backward_filter = self.web2.eth.filter({
-									'fromBlock': hex(int(self.current_block)-1),
-									'toBlock': hex(int(self.current_block)),
-								})
-							for event in backward_filter.get_all_entries():
-								self.queue.put(event)
-							self.web2.eth.uninstall_filter(backward_filter.filter_id)
-							self.lock_backward = True
-							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
-							global_vars.backblock_progress = self.current_block
-							self.lock_backward = False
-					else:
-						self.back_running = False
-					time.sleep(0.01)
-				except ValueError as e:
-					self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
-				except Exception as e:
-					self.logger.critical('Exception in Back Listener loop!',exc_info=True)
-					self.errors += 0.2
-					if self.errors > 2:
-						self.back_running = False
+	# def back_loop(self, thread):
+	# 	self.logger.info(f'{thread} Starting back listener...')
+	# 	while self.back_running and self.errors < 2:
+	# 		if not self.lock_backward:
+	# 			try:
+	# 				if self.start_block != 'None':
+	# 					if self.current_block>self.start_block:
+	# 						self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
+	# 						backward_filter = self.web2.eth.filter({
+	# 								'fromBlock': hex(int(self.current_block)-1),
+	# 								'toBlock': hex(int(self.current_block)),
+	# 							})
+	# 						for event in backward_filter.get_all_entries():
+	# 							self.queue.put(event)
+	# 						self.web2.eth.uninstall_filter(backward_filter.filter_id)
+	# 						self.lock_backward = True
+	# 						self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+	# 						global_vars.backblock_progress = self.current_block
+	# 						self.lock_backward = False
+	# 				else:
+	# 					self.back_running = False
+	# 				time.sleep(0.01)
+	# 			except ValueError as e:
+	# 				self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
+	# 			except Exception as e:
+	# 				self.logger.critical('Exception in Back Listener loop!',exc_info=True)
+	# 				self.errors += 0.2
+	# 				if self.errors > 2:
+	# 					self.back_running = False
 
 	def queue_handler(self, thread):
 		self.logger.info('Starting Worker: {}'.format(thread))
@@ -296,8 +337,16 @@ class EventHandler:
 				address = event['address']
 				event_topics = event['topics']
 				main_topic = [x.hex() for x in event_topics][0]
+				event_hash = hashlib.sha256(json.dumps(Web3.toJSON(event), sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
 
-				if main_topic in self.topics:
+				if main_topic in self.topics and event_hash not in global_vars.events_cache:
+					while self.lock_queue==True:
+						time.sleep(1)
+					self.lock_queue = True
+					global_vars.events_cache.insert(0, event_hash)
+					if len(global_vars.events_cache) >= 100:
+						global_vars.events_cache.pop()
+					self.lock_queue = False
 					xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 					xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 
@@ -342,7 +391,7 @@ class EventHandler:
 						address_filter = self.get_address_filter(xquery_event)
 						if address_filter:
 							xquery_event['address_filter'] = address_filter['name']
-						
+
 						#get function
 						function = self.get_function(thread, self.web4, xquery_name, tx, address, self.abi['abi'])
 						if len(list(function)) == 0:
@@ -351,10 +400,11 @@ class EventHandler:
 								function = self.get_function(thread, self.web4, xquery_name, tx, address_filter['address'], self.abi['abi'])
 						for k, v in function.items():
 							xquery_event[f'{k}'] = v
+
 						
 						#add to db only if event belongs to a router
 						if 'address_filter' in list(xquery_event):
-							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
+							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.logger.info(f"{thread} SUCCESS QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
 							zmq_handler.insert_queue([xquery_event])
 					except Exception as e:

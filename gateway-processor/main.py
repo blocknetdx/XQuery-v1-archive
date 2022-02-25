@@ -70,11 +70,11 @@ def main():
                             setattr(item, attr, message[attr])
 
                         if any((x.tx_hash == item.tx_hash and x.query_name == item.query_name and x.chain_name == item.chain_name and x.blocknumber == item.blocknumber and x.timestamp == item.timestamp) for x in txs):
-                            logger.info(f'ALREADY QUERY:{item.query_name} XHASH:{item.xhash} TX:{item.tx_hash}')
+                            logger.info(f'ALREADY {item.blocknumber} QUERY:{item.query_name} XHASH:{item.xhash} TX:{item.tx_hash}')
 
                             continue
                         else:
-                            logger.info(f'PASSED QUERY:{item.query_name} XHASH:{item.xhash} TX:{item.tx_hash}')
+                            logger.info(f'PASSED {item.blocknumber} QUERY:{item.query_name} XHASH:{item.xhash} TX:{item.tx_hash}')
                             data.append(message)
                             txs.insert(0, item)
 

@@ -86,10 +86,10 @@ def main():
 					ping_handler.start()
 
 					for i in range(0, WORKER_THREADS):
-						if i == 0 or i == 1:
+						if i in [0,1,2]:
 							futures.append(executor.submit(event_handler.forward_loop, thread=i))
-						elif i == 2  or i == 3:
-							futures.append(executor.submit(event_handler.back_loop, thread=i))
+						# elif i == 2  or i == 3:
+						# 	futures.append(executor.submit(event_handler.back_loop, thread=i))
 						else:	
 							futures.append(executor.submit(event_handler.queue_handler, thread=i))
 					event_handler.control_loop()

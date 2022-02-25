@@ -6,3 +6,4 @@ pyzmq==22.3.0
 pony
 rusty-rlp==0.1.15
 web3==5.28.0
+pickle5==0.0.11
