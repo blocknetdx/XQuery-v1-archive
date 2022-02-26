@@ -86,11 +86,12 @@ def main():
 					ping_handler.start()
 
 					for i in range(0, WORKER_THREADS):
-						if i in [0,1,2]:
+						if i in [0,1]:
 							futures.append(executor.submit(event_handler.forward_loop, thread=i))
-						# elif i == 2  or i == 3:
-						# 	futures.append(executor.submit(event_handler.back_loop, thread=i))
-						else:	
+						elif i in [2,3]:
+							futures.append(executor.submit(event_handler.back_loop, thread=i))
+						else:
+							time.sleep(0.01)
 							futures.append(executor.submit(event_handler.queue_handler, thread=i))
 					event_handler.control_loop()
 
@@ -113,7 +114,8 @@ def main():
 					# sys.exit(1)
 
 		except Exception as e:
-			logger.critical(f"Something went wrong when calling {CHAIN_NAME} host...",exc_info=True)
+			logger.critical(f"Something went wrong when calling {CHAIN_NAME} host... Waiting 30 seconds", exc_info=True)
+			time.sleep(30)
 
 
 	

@@ -25,6 +25,7 @@ services:
     volumes:
       - ${PWD}/{{ chain.abi }}:/app/manager/abi.json
       - ${PWD}/{{ query_config }}:/app/manager/query.yaml
+      - ${PWD}/profile:/app/manager/profile
     networks:
       backend:
         ipv4_address: {{ chain.ip }}

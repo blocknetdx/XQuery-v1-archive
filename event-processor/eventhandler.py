@@ -40,6 +40,7 @@ class EventHandler:
 		self.codec: ABICodec = web4.codec
 		self.blockTime = {}
 		self.queue = Queue()
+		self.back_queue = Queue()
 		self.query = self.load_query()
 		self.index_topics = self.load_index_topics()
 		self.abi = self.load_abi()
@@ -48,12 +49,12 @@ class EventHandler:
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
 		self.start_block = self.load_start_block()
-		#self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
-		self.current_block_forward = self.latest_block if self.start_block=='None' else self.start_block	
+		self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
+		self.current_block_forward = self.latest_block if global_vars.forwardblock_progress == None else global_vars.forwardblock_progress
 		self.lock_forward = False
-		# self.lock_backward = False
+		self.lock_backward = False
 		self.lock_queue = False
-		# self.back_running = True
+		self.back_running = True
 		self.running = True
 		self.errors = 0
 
@@ -278,6 +279,7 @@ class EventHandler:
 					self.lock_forward = True
 					self.get_latest_block()
 					self.current_block_forward = self.current_block_forward + 1 if self.current_block_forward < self.latest_block else self.latest_block
+					global_vars.forwardblock_progress = self.current_block_forward
 					self.lock_forward = False
 					time.sleep(0.01)
 				except ValueError as e:
@@ -290,35 +292,35 @@ class EventHandler:
 					if self.errors > 2:
 						self.running = False
 
-	# def back_loop(self, thread):
-	# 	self.logger.info(f'{thread} Starting back listener...')
-	# 	while self.back_running and self.errors < 2:
-	# 		if not self.lock_backward:
-	# 			try:
-	# 				if self.start_block != 'None':
-	# 					if self.current_block>self.start_block:
-	# 						self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
-	# 						backward_filter = self.web2.eth.filter({
-	# 								'fromBlock': hex(int(self.current_block)-1),
-	# 								'toBlock': hex(int(self.current_block)),
-	# 							})
-	# 						for event in backward_filter.get_all_entries():
-	# 							self.queue.put(event)
-	# 						self.web2.eth.uninstall_filter(backward_filter.filter_id)
-	# 						self.lock_backward = True
-	# 						self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
-	# 						global_vars.backblock_progress = self.current_block
-	# 						self.lock_backward = False
-	# 				else:
-	# 					self.back_running = False
-	# 				time.sleep(0.01)
-	# 			except ValueError as e:
-	# 				self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
-	# 			except Exception as e:
-	# 				self.logger.critical('Exception in Back Listener loop!',exc_info=True)
-	# 				self.errors += 0.2
-	# 				if self.errors > 2:
-	# 					self.back_running = False
+	def back_loop(self, thread):
+		self.logger.info(f'{thread} Starting back listener...')
+		while self.back_running and self.errors < 2:
+			if not self.lock_backward:
+				try:
+					if self.start_block != 'None':
+						if self.current_block>self.start_block:
+							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
+							backward_filter = self.web2.eth.filter({
+									'fromBlock': hex(int(self.current_block)-1),
+									'toBlock': hex(int(self.current_block))
+								})
+							for event in backward_filter.get_all_entries():
+								self.back_queue.put(event)
+							self.web2.eth.uninstall_filter(backward_filter.filter_id)
+							self.lock_backward = True
+							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+							global_vars.backblock_progress = self.current_block
+							self.lock_backward = False
+					else:
+						self.back_running = False
+					time.sleep(0.01)
+				except ValueError as e:
+					self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
+				except Exception as e:
+					self.logger.critical('Exception in Back Listener loop!',exc_info=True)
+					self.errors += 0.2
+					if self.errors > 2:
+						self.back_running = False
 
 	def queue_handler(self, thread):
 		self.logger.info('Starting Worker: {}'.format(thread))
@@ -332,7 +334,12 @@ class EventHandler:
 					self.logger.critical('Exception while attempting to reset blocktimes',exc_info=True)
 
 			try:
-				event = self.queue.get()
+				if global_vars.queue == False:
+					event = self.queue.get()
+					global_vars.queue = True
+				else:
+					event = self.back_queue.get()
+					global_vars.queue = False
 				tx = event.transactionHash.hex()
 				address = event['address']
 				event_topics = event['topics']

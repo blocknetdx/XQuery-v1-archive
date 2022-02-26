@@ -7,3 +7,4 @@ pony
 rusty-rlp==0.1.15
 web3==5.28.0
 pickle5==0.0.11
+scalene==1.5.4
