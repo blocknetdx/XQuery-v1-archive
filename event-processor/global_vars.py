@@ -9,7 +9,9 @@ def init():
 	global contracts_cache
 	global events_cache
 	global queue
+	global running
 	queue = False
+	running = True
 	backblock_progress = None
 	forwardblock_progress = None
 	token_data_cache = dict()

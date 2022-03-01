@@ -3,11 +3,12 @@ import os
 import time
 import uuid
 import zmq
-from queue import Queue
+# from queue import Queue
+# from multiprocessing import Queue
 import logging
 
 class ZMQ:
-	def __init__(self):
+	def __init__(self, queue):
 		self.logger = logging.getLogger("ZMQ")
 		self.context = zmq.Context()
 		self.socket = self.context.socket(zmq.PUSH)
@@ -26,7 +27,7 @@ class ZMQ:
 
 		self.exchange = os.environ.get('EXCHANGE', 'AVAX')
 		self.id = uuid.uuid4().hex
-		self.queue = Queue()
+		self.queue = queue
 
 	def init(self):
 		try:
@@ -77,8 +78,8 @@ class ZMQ:
 		except Exception as e:
 			self.logger.critical(e,exc_info=True)
 
-	def insert_queue(self, trades):
-		self.queue.put(trades)
+	# def insert_queue(self, trades):
+	# 	self.queue.put(trades)
 
 	def send_trades(self):
 		while True:
@@ -95,4 +96,4 @@ class ZMQ:
 				self.logger.critical('ZMQ HANDLER', exc_info=True)
 
 
-zmq_handler = ZMQ()
+# zmq_handler = ZMQ()

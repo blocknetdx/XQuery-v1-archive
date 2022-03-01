@@ -1,9 +1,10 @@
 import os
 import json
 import time
-from queue import Queue
+# from queue import Queue
+# from multiprocessing import Queue
 from web3 import Web3
-from utils.zmq import zmq_handler
+# from utils.zmq import zmq_handler
 import yaml
 import json
 import logging
@@ -13,25 +14,9 @@ import global_vars
 import pickle5 as pickle
 import random
 
-def make_hash_sha256(o):
-	hasher = hashlib.sha256()
-	hasher.update(repr(make_hashable(o)).encode())
-	return base64.b64encode(hasher.digest()).decode()
-
-def make_hashable(o):
-	if isinstance(o, (tuple, list)):
-		return tuple((make_hashable(e) for e in o))
-
-	if isinstance(o, dict):
-		return tuple(sorted((k,make_hashable(v)) for k,v in o.items()))
-
-	if isinstance(o, (set, frozenset)):
-		return tuple(sorted(make_hashable(e) for e in o))
-
-	return o
 
 class EventHandler:
-	def __init__(self, web2: Web3, web3: Web3, web4: Web3):
+	def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue):
 		self.logger = logging.getLogger("EventHandler")
 		self.chain_name = os.environ.get('NAME','AVAX')
 		self.web2 = web2
@@ -39,8 +24,9 @@ class EventHandler:
 		self.web4 = web4
 		self.codec: ABICodec = web4.codec
 		self.blockTime = {}
-		self.queue = Queue()
-		self.back_queue = Queue()
+		self.event_queue = event_queue
+		self.zmq_queue = zmq_queue
+		# self.back_queue = Queue()
 		self.query = self.load_query()
 		self.index_topics = self.load_index_topics()
 		self.abi = self.load_abi()
@@ -274,7 +260,7 @@ class EventHandler:
 						'toBlock': hex(self.current_block_forward)
 					})
 					for event in forward_filter.get_all_entries():
-						self.queue.put(event)
+						self.event_queue.put(event)
 					self.web2.eth.uninstall_filter(forward_filter.filter_id)
 					self.lock_forward = True
 					self.get_latest_block()
@@ -291,6 +277,7 @@ class EventHandler:
 					self.errors += 0.2
 					if self.errors > 2:
 						self.running = False
+						global_vars.running = False
 
 	def back_loop(self, thread):
 		self.logger.info(f'{thread} Starting back listener...')
@@ -305,7 +292,7 @@ class EventHandler:
 									'toBlock': hex(int(self.current_block))
 								})
 							for event in backward_filter.get_all_entries():
-								self.back_queue.put(event)
+								self.event_queue.put(event)
 							self.web2.eth.uninstall_filter(backward_filter.filter_id)
 							self.lock_backward = True
 							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
@@ -334,12 +321,13 @@ class EventHandler:
 					self.logger.critical('Exception while attempting to reset blocktimes',exc_info=True)
 
 			try:
-				if global_vars.queue == False:
-					event = self.queue.get()
-					global_vars.queue = True
-				else:
-					event = self.back_queue.get()
-					global_vars.queue = False
+				# if global_vars.queue == False:
+				# 	event = self.queue.get()
+				# 	global_vars.queue = True
+				# else:
+				# 	event = self.back_queue.get()
+				# 	global_vars.queue = False
+				event = self.event_queue.get()
 				tx = event.transactionHash.hex()
 				address = event['address']
 				event_topics = event['topics']
@@ -413,12 +401,14 @@ class EventHandler:
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.logger.info(f"{thread} SUCCESS QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
-							zmq_handler.insert_queue([xquery_event])
+							# zmq_handler.insert_queue([xquery_event])
+							self.zmq_queue.put([xquery_event])
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
-				self.queue.task_done()
+				self.event_queue.task_done()
 			except Exception as e:
 				self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
 
 				self.running = False
+				global_vars.running = False
 				self.errors += 1
