@@ -3,8 +3,6 @@ import os
 import time
 import uuid
 import zmq
-# from queue import Queue
-# from multiprocessing import Queue
 import logging
 
 class ZMQ:
@@ -78,9 +76,6 @@ class ZMQ:
 		except Exception as e:
 			self.logger.critical(e,exc_info=True)
 
-	# def insert_queue(self, trades):
-	# 	self.queue.put(trades)
-
 	def send_trades(self):
 		while True:
 			try:
@@ -94,6 +89,3 @@ class ZMQ:
 				self.queue.task_done()
 			except Exception as e:
 				self.logger.critical('ZMQ HANDLER', exc_info=True)
-
-
-# zmq_handler = ZMQ()

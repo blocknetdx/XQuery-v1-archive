@@ -1,7 +1,5 @@
 import time
 from threading import Thread
-# from multiprocessing import Process
-
 
 class PingHandler(Thread):
     def __init__(self, zmq_handler):

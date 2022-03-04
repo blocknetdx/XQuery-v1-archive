@@ -1,23 +1,20 @@
 import os
 import json
 import time
-# from queue import Queue
-# from multiprocessing import Queue
 from web3 import Web3
-# from utils.zmq import zmq_handler
 import yaml
 import json
 import logging
 import hashlib
 import base64
-import global_vars
 import pickle5 as pickle
 import random
 
 
 class EventHandler:
-	def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue):
+	def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue, global_vars):
 		self.logger = logging.getLogger("EventHandler")
+		self.global_vars = global_vars
 		self.chain_name = os.environ.get('NAME','AVAX')
 		self.web2 = web2
 		self.web3 = web3
@@ -26,7 +23,6 @@ class EventHandler:
 		self.blockTime = {}
 		self.event_queue = event_queue
 		self.zmq_queue = zmq_queue
-		# self.back_queue = Queue()
 		self.query = self.load_query()
 		self.index_topics = self.load_index_topics()
 		self.abi = self.load_abi()
@@ -35,8 +31,8 @@ class EventHandler:
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
 		self.start_block = self.load_start_block()
-		self.current_block = self.latest_block if global_vars.backblock_progress == None else global_vars.backblock_progress
-		self.current_block_forward = self.latest_block if global_vars.forwardblock_progress == None else global_vars.forwardblock_progress
+		self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+		self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 		self.lock_forward = False
 		self.lock_backward = False
 		self.lock_queue = False
@@ -107,8 +103,8 @@ class EventHandler:
 
 	#get token details from address
 	def get_token_data(self, w3, address, abi):
-		if address in global_vars.coin_data_cache:
-			return json.loads(pickle.loads(global_vars.coin_data_cache[address]))
+		if address in self.global_vars.return_key('coin_data_cache'):
+			return json.loads(pickle.loads(self.global_vars.return_key('coin_data_cache')[address]))
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
 			name = None
@@ -118,31 +114,27 @@ class EventHandler:
 				name = contract.functions.name().call()
 			except Exception as e:
 				pass
-				# self.logger.critical(f'No name for contract {address}')
 			try:
 				symbol = contract.functions.symbol().call()
 			except Exception as e:
 				pass
-				# self.logger.critical(f'No symbol for contract {address}')
 			try:
 				decimals = contract.functions.decimals().call()
 			except Exception as e:
 				pass
-				# self.logger.critical(f'No decimals for contract {address}')
 			data =	{
 			"name": str(name) if name else None,
 			"symbol": str(symbol) if symbol else None,
 			"decimals": int(decimals) if decimals else None
 			}
-			if len(global_vars.coin_data_cache.keys())>=100:
-				global_vars.coin_data_cache.pop(random.choice(global_vars.coin_data_cache.keys()))
-			global_vars.coin_data_cache[address] = pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5)
+			self.global_vars.remove_key('coin_data_cache')
+			self.global_vars.add_key('coin_data_cache', address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
 			return d
 
 	#get pair details from contract address
 	def get_tokens_from_caddress(self, w3, contract_address, abi):
-		if contract_address in global_vars.token_data_cache:
-			return json.loads(pickle.loads(global_vars.token_data_cache[contract_address]))
+		if contract_address in self.global_vars.return_key('token_data_cache'):
+			return json.loads(pickle.loads(self.global_vars.return_key('token_data_cache')[contract_address]))
 		else:
 			contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address),abi=abi)
 			token0_address = contract.functions.token0().call()
@@ -153,9 +145,8 @@ class EventHandler:
 			'token0': token0,
 			'token1': token1
 			}
-			if len(global_vars.token_data_cache.keys())>=100:
-				global_vars.token_data_cache.pop(random.choice(global_vars.token_data_cache.keys()))
-			global_vars.token_data_cache[contract_address] = pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5)
+			self.global_vars.remove_key('token_data_cache')
+			self.global_vars.add_key('token_data_cache', contract_address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
 			return data
 
 	def get_address_filter(self, xquery_event):
@@ -171,13 +162,12 @@ class EventHandler:
 		transaction = w3.eth.get_transaction(tx)
 		try:
 			pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
-			if pb in global_vars.functions_cache:
-				contract_router = global_vars.functions_cache[pb]
+			if pb in self.global_vars.return_key('functions_cache'):
+				contract_router = self.global_vars.return_key('functions_cache')[pb]
 			else:
 				contract_router = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
-				if len(global_vars.token_data_cache.keys())>=100:
-					global_vars.token_data_cache.pop(random.choice(global_vars.token_data_cache.keys()))
-				global_vars.functions_cache[pb] = contract_router
+				self.global_vars.remove_key('functions_cache')
+				self.global_vars.add_key('functions_cache',pb,contract_router)
 
 			decoded_input = contract_router.decode_function_input(transaction.input)
 			func = decoded_input[0]
@@ -190,28 +180,24 @@ class EventHandler:
 					function[k] = ','.join(v)
 		except Exception as e:
 			pass
-			# self.logger.critical(f'Exception get_function {thread} {event_name} {tx} {contract_address}')
 		return function
 
 	def process_event(self, thread, w3, event, event_name, event_type, contract_address, abi):
 		xquery_event = {}
 		try:
 			pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
-			if pb in global_vars.contracts_cache:
-				contract = global_vars.contracts_cache[pb]
+			if pb in self.global_vars.return_key('contracts_cache'):
+				contract = self.global_vars.return_key('contracts_cache')[pb]
 			else:
-				contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
-				global_vars.contracts_cache[pb] = contract
-				if len(global_vars.contracts_cache.keys())>=100:
-					global_vars.contracts_cache.pop(random.choice(global_vars.contracts_cache.keys()))
-				global_vars.functions_cache[pb] = contract_router
+				contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)				
+				self.global_vars.remove_key('contracts_cache')
+				self.global_vars.add_key('contracts_cache', pb, contract)
 			contract_call = getattr(contract,f'{event_type.lower()}s')
 			action_call = getattr(contract_call,event_name.lower().capitalize())
 			xquery_event = action_call().processLog(event)
 			xquery_event = json.loads(Web3.toJSON(xquery_event))
 		except Exception as e:
 			pass
-			# self.logger.critical(f'Exception process_event {thread} {event_name} {event_type} {contract_address}',exc_info=True)			
 		return xquery_event
 
 	def process_event_args(self, thread, w3, xquery_name, xquery_event, contract_address, abi):
@@ -240,7 +226,6 @@ class EventHandler:
 				args['token0_decimals'] = token_data['decimals']
 		except Exception as e:
 			pass
-			# self.logger.critical(f"Exception process_event_args {thread} {xquery_name} {contract_address}",exc_info=True)
 		return args
 
 	def control_loop(self):
@@ -265,19 +250,17 @@ class EventHandler:
 					self.lock_forward = True
 					self.get_latest_block()
 					self.current_block_forward = self.current_block_forward + 1 if self.current_block_forward < self.latest_block else self.latest_block
-					global_vars.forwardblock_progress = self.current_block_forward
+					self.global_vars.update_key('forwardblock_progress', self.current_block_forward)
 					self.lock_forward = False
 					time.sleep(0.01)
 				except ValueError as e:
-					# self.get_latest_block()
 					self.logger.critical('ValueError in Listener loop!',exc_info=True)
 				except Exception as e:
-					# self.get_latest_block()
 					self.logger.critical('Exception in Listener loop!',exc_info=True)
 					self.errors += 0.2
 					if self.errors > 2:
 						self.running = False
-						global_vars.running = False
+						self.global_vars.update_key('running', False)
 
 	def back_loop(self, thread):
 		self.logger.info(f'{thread} Starting back listener...')
@@ -296,7 +279,7 @@ class EventHandler:
 							self.web2.eth.uninstall_filter(backward_filter.filter_id)
 							self.lock_backward = True
 							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
-							global_vars.backblock_progress = self.current_block
+							self.global_vars.update_key('backblock_progress', self.current_block)
 							self.lock_backward = False
 					else:
 						self.back_running = False
@@ -321,12 +304,6 @@ class EventHandler:
 					self.logger.critical('Exception while attempting to reset blocktimes',exc_info=True)
 
 			try:
-				# if global_vars.queue == False:
-				# 	event = self.queue.get()
-				# 	global_vars.queue = True
-				# else:
-				# 	event = self.back_queue.get()
-				# 	global_vars.queue = False
 				event = self.event_queue.get()
 				tx = event.transactionHash.hex()
 				address = event['address']
@@ -334,13 +311,12 @@ class EventHandler:
 				main_topic = [x.hex() for x in event_topics][0] if len(event_topics)>0 else None
 				event_hash = hashlib.sha256(json.dumps(Web3.toJSON(event), sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
 
-				if main_topic in self.topics and event_hash not in global_vars.events_cache:
+				if main_topic in self.topics and event_hash not in self.global_vars.return_key('events_cache'):
 					while self.lock_queue==True:
 						time.sleep(1)
 					self.lock_queue = True
-					global_vars.events_cache.insert(0, event_hash)
-					if len(global_vars.events_cache) >= 100:
-						global_vars.events_cache.pop()
+					self.global_vars.add_key('events_cache', event_hash, None)
+					self.global_vars.remove_key('events_cache')
 					self.lock_queue = False
 					xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 					xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
@@ -355,7 +331,6 @@ class EventHandler:
 								self.blockTime[blockNumber] = timestamp['timestamp']
 						except Exception as e:
 							pass
-							# self.logger.critical('Exception while waiting for block time!', exc_info=True)
 
 						if retries > 10:
 							break
@@ -396,12 +371,10 @@ class EventHandler:
 						for k, v in function.items():
 							xquery_event[f'{k}'] = v
 
-						
 						#add to db only if event belongs to a router
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.logger.info(f"{thread} SUCCESS QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
-							# zmq_handler.insert_queue([xquery_event])
 							self.zmq_queue.put([xquery_event])
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
@@ -410,5 +383,5 @@ class EventHandler:
 				self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
 
 				self.running = False
-				global_vars.running = False
+				self.global_vars.update_key('running', False)
 				self.errors += 1
