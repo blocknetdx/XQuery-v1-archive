@@ -14,7 +14,7 @@ jobs:
       run: echo ${{ github.event.inputs.path }} ${{ github.event.inputs.image }} ${{ github.event.inputs.version }}
     - name: build an image
       if: github.ref == 'refs/heads/master'
-      run: docker build ./event-processor --file Dockerfile --tag blocknetdx/xquery-event-processor:latest
+      run: docker build ./event-processor/ --file Dockerfile --tag blocknetdx/xquery-event-processor:latest
     - name: push image
       if: github.ref == 'refs/heads/master'
       run: docker push blocknetdx/xquery-event-processor:latest
