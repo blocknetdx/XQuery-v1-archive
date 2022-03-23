@@ -110,6 +110,8 @@ def main():
 				live = eth_live(CHAIN_HOST)
 			elif 'AVAX' in CHAIN_NAME:
 				live = avax_live(CHAIN_HOST)
+			elif 'SYS' in CHAIN_NAME:
+				live = eth_live(CHAIN_HOST)
 			if live == False:
 				logger.info(f'{CHAIN_NAME} node syncing... Retrying in 30 seconds')
 				time.sleep(30)
