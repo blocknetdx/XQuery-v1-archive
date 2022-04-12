@@ -30,7 +30,7 @@ services:
       - ${PWD}/profile:/app/manager/profile
     networks:
       backend:
-        ipv4_address: {{ chain.ip }}
+        ipv4_address: {{ event_type.ip }}
     logging:
       driver: "local"
       options:

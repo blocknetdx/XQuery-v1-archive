@@ -50,7 +50,8 @@ if __name__ == "__main__":
 		if key0 == 'chains':
 			for item in item0:
 				name = item['name']
-				item['ip'] = ips.pop(0)
+				for event in item['query']:
+					event[f'ip'] = ips.pop(0)
 				final_data['chains'].append(item)
 		elif key0 == 'graph':
 			final_data[key0] = item0
