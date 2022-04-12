@@ -2,8 +2,9 @@ version: '3.6'
 services:
 
 {% for chain in chains %}
-####{{ chain.name.lower() }} STACK START
-  event-processor-{{ chain.name.lower() | replace('_','-') }}:
+{% for event_type in chain.query %}
+####{{ chain.name.lower()+'_'+event_type.name.lower() }} STACK START
+  event-processor-{{ chain.name.lower() | replace('_','-') }}-{{ event_type.name.lower() }}:
     build: ./event-processor
     depends_on:
       - "graphql-engine"
@@ -12,6 +13,7 @@ services:
     restart: always
     environment:
       NAME: {{ chain.name }}
+      EVENT_TYPE: {{ event_type.name }}
       WORKER_THREADS: 30
       CHAIN_HOST: {{ chain.rpc_host }}
       DB_HOST: {{ postgres_ip }}
@@ -32,10 +34,10 @@ services:
     logging:
       driver: "local"
       options:
-        max-file: 5
+        max-file: '5'
         max-size: 10m
-####{{ chain.name.lower() }} STACK END
-
+####{{ chain.name.lower()+'_'+event_type.name.lower() }} STACK END
+{% endfor %}
 {% endfor %}
   gateway-processor:
     build: ./gateway-processor
@@ -58,7 +60,7 @@ services:
     logging:
       driver: "local"
       options:
-        max-file: 5
+        max-file: '5'
         max-size: 10m
   db-processor:
     build: ./db-processor
@@ -89,7 +91,7 @@ services:
     logging:
       driver: "local"
       options:
-        max-file: 5
+        max-file: '5'
         max-size: 10m
   postgres:
     image: postgres:12
@@ -107,7 +109,7 @@ services:
     logging:
       driver: "local"
       options:
-        max-file: 5
+        max-file: '5'
         max-size: 10m
   graphql-engine:
     image: hasura/graphql-engine:v2.0.10
@@ -129,7 +131,7 @@ services:
     logging:
       driver: "local"
       options:
-        max-file: 5
+        max-file: '5'
         max-size: 10m
   reverse-proxy:
     build: ./reverse-proxy

@@ -26,11 +26,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.event_queue = event_queue
 			self.zmq_queue = zmq_queue
 			self.query = self.load_query()
-			self.index_topics = self.load_index_topics()
+			self.index_topics = self.load_index_topics()			
 			self.abi = self.load_abi()
 			self.rc_abi = self.load_rc_abi()
 			self.topics = self.get_topics_for_query()
 			self.address = self.get_address_filter_input()
+			self.event_type = self.get_event_topic()
 			self.get_latest_block()
 			self.start_block = self.load_start_block()
 			self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
@@ -102,6 +103,14 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				for entry in query_data['chains']:
 					if entry['name'] == self.chain_name: 
 						return entry
+
+		#event topic for web3 filter
+		def get_event_topic(self):
+			event_type = os.environ('EVENT_TYPE')
+			for event in self.index_topics['event']:
+				if event['name'] == event_type:
+					return event['topic']
+
 
 		#get token details from address
 		def get_token_data(self, w3, address, abi):
@@ -244,7 +253,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						self.logger.info(f'{thread} {self.chain_name} {self.current_block_forward} FORWARD')
 						forward_filter = self.web2.eth.filter({
 							'fromBlock': hex(self.current_block_forward-1),
-							'toBlock': hex(self.current_block_forward)
+							'toBlock': hex(self.current_block_forward),
+							'topics': [self.event_type]
 						})
 						for event in forward_filter.get_all_entries():
 							self.event_queue.put(event)
@@ -274,7 +284,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 								self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
 								backward_filter = self.web2.eth.filter({
 										'fromBlock': hex(int(self.current_block)-1),
-										'toBlock': hex(int(self.current_block))
+										'toBlock': hex(int(self.current_block)),
+										'topics': [self.event_type]
 									})
 								for event in backward_filter.get_all_entries():
 									self.event_queue.put(event)

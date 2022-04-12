@@ -14,12 +14,6 @@ chains:
       - name: Swap
       - name: Sync
       - name: Transfer
-      - name: Approval
-      - name: Burn
-      - name: Mint
-      - name: Swap
-      - name: Sync
-      - name: Transfer
     address:
     - name: Uniswap_Router_v2
       address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
@@ -31,12 +25,6 @@ chains:
     query:
       - name: Withdrawal
       - name: Deposit
-      - name: Approval
-      - name: Burn
-      - name: Mint
-      - name: Swap
-      - name: Sync
-      - name: Transfer
       - name: Approval
       - name: Burn
       - name: Mint
