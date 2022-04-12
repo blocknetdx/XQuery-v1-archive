@@ -106,7 +106,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 
 		#event topic for web3 filter
 		def get_event_topic(self):
-			event_type = os.environ('EVENT_TYPE')
+			event_type = os.environ.get('EVENT_TYPE')
 			for event in self.index_topics['event']:
 				if event['name'] == event_type:
 					return event['topic']
