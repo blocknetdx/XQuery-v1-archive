@@ -12,4 +12,8 @@ RUN apt-get install -y build-essential musl-dev gcc g++ libffi-dev libssl-dev py
     && rm -rf /usr/share/man \
     && rm -rf /tmp/*
 
-CMD sleep 20 && python3 /app/manager/index_topics.py && python3 -m scalene --profile-interval 10.0 --cli --html --outfile /app/manager/profile/$NAME.html /app/manager/main.py
+#Scalene Profiler
+#CMD sleep 20 && python3 /app/manager/index_topics.py && python3 -m scalene --profile-interval 10.0 --cli --html --outfile /app/manager/profile/$NAME.html /app/manager/main.py
+
+CMD sleep 20 && python3 /app/manager/index_topics.py && python3 /app/manager/main.py
+
