@@ -336,25 +336,24 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 
 						blockNumber = event['blockNumber']
 
-						# retries = 0
-						# while blockNumber not in self.blockTime:
-						# 	try:
-						# 		timestamp = self.web4.eth.getBlock(blockNumber)
-						# 		if 'timestamp' in timestamp:
-						# 			self.blockTime[blockNumber] = timestamp['timestamp']
-						# 	except Exception as e:
-						# 		pass
+						retries = 0
+						while blockNumber not in self.blockTime:
+							try:
+								timestamp = self.web4.eth.getBlock(blockNumber)
+								if 'timestamp' in timestamp:
+									self.blockTime[blockNumber] = timestamp['timestamp']
+							except Exception as e:
+								pass
 
-						# 	if retries > 10:
-						# 		break
+							if retries > 10:
+								break
 
-						# 	retries += 1
-						# 	time.sleep(0.01)
-						# if retries > 10:
-						# 	continue
+							retries += 1
+							time.sleep(0.01)
+						if retries > 10:
+							continue
 
-						# timestamp = self.blockTime[blockNumber]
-						timestamp = 0
+						timestamp = self.blockTime[blockNumber]
 
 						try:
 							#process event
