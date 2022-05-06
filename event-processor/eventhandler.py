@@ -454,15 +454,15 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				self.events_cache.insert(0, value)
 
 		def remove_key(self, key):
-			if key == 'token_data_cache' and len(self.token_data_cache.keys())>=500:
+			if key == 'token_data_cache' and len(self.token_data_cache.keys())>=10:
 				self.token_data_cache.pop(random.choice(self.token_data_cache.keys()))
-			elif key == 'coin_data_cache' and len(self.coin_data_cache.keys())>=500:
+			elif key == 'coin_data_cache' and len(self.coin_data_cache.keys())>=10:
 				self.coin_data_cache.pop(random.choice(self.coin_data_cache.keys()))
-			elif key == 'functions_cache' and len(self.functions_cache.keys())>=500:
+			elif key == 'functions_cache' and len(self.functions_cache.keys())>=10:
 				self.functions_cache.pop(random.choice(self.functions_cache.keys()))
-			elif key == 'contracts_cache' and len(self.contracts_cache.keys())>=500:
+			elif key == 'contracts_cache' and len(self.contracts_cache.keys())>=10:
 				self.contracts_cache.pop(random.choice(self.contracts_cache.keys()))
-			elif key == 'events_cache' and len(self.events_cache)>=500:
+			elif key == 'events_cache' and len(self.events_cache)>=10:
 				self.events_cache.pop()
 
 	adapter = requests.adapters.HTTPAdapter(pool_connections=30, pool_maxsize=30)
