@@ -12,6 +12,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 	import pickle5 as pickle
 	import random
 	import requests
+	import redis
 
 	class EventHandler:
 		def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue, global_vars):
@@ -42,6 +43,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.back_running = True
 			self.running = True
 			self.errors = 0
+			self.redis_cache = redis.Redis()
 
 		def get_latest_block(self):
 			self.latest_block = int(self.web4.eth.block_number)-1
@@ -336,25 +338,25 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 
 						blockNumber = event['blockNumber']
 
-						# retries = 0
-						# while blockNumber not in self.blockTime:
-						# 	try:
-						# 		timestamp = self.web4.eth.getBlock(blockNumber)
-						# 		if 'timestamp' in timestamp:
-						# 			self.blockTime[blockNumber] = timestamp['timestamp']
-						# 	except Exception as e:
-						# 		pass
+						retries = 0
+						while blockNumber not in self.blockTime:
+							try:
+								timestamp = self.web4.eth.getBlock(blockNumber)
+								if 'timestamp' in timestamp:
+									# self.blockTime[blockNumber] = timestamp['timestamp']
+									self.redis_cache.hmset("Block" + blockNumber, timestamp)
+							except Exception as e:
+								pass
 
-						# 	if retries > 10:
-						# 		break
+							if retries > 10:
+								break
 
-						# 	retries += 1
-						# 	time.sleep(0.01)
-						# if retries > 10:
-						# 	continue
+							retries += 1
+							time.sleep(0.01)
+						if retries > 10:
+							continue
 
-						# timestamp = self.blockTime[blockNumber]
-						timestamp = 0
+						timestamp = self.redis_cache.hget("Block" + blockNumber, "timestamp")
 
 						try:
 							#process event
