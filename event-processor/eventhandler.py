@@ -35,7 +35,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.event_type = self.get_event_topic()
 			self.get_latest_block()
 			self.start_block = self.load_start_block()
-			self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+			#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+			self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 			self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 			self.lock_forward = False
 			self.lock_backward = False
@@ -282,18 +283,22 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				if not self.lock_backward:
 					try:
 						if self.start_block != 'None':
-							if self.current_block>self.start_block:
+							#if self.current_block>self.start_block:
+							if self.current_block<self.latest_block:
 								self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
 								backward_filter = self.web2.eth.filter({
-										'fromBlock': hex(int(self.current_block)-1),
-										'toBlock': hex(int(self.current_block)),
+										#'fromBlock': hex(int(self.current_block)-1),
+										#'toBlock': hex(int(self.current_block)),
+										'fromBlock': hex(int(self.current_block)),
+ 										'toBlock': hex(int(self.current_block)+1)
 										'topics': [self.event_type]
 									})
 								for event in backward_filter.get_all_entries():
 									self.event_queue.put(event)
 								self.web2.eth.uninstall_filter(backward_filter.filter_id)
 								self.lock_backward = True
-								self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+								#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+								self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
 								self.global_vars.update_key('backblock_progress', self.current_block)
 								self.lock_backward = False
 						else:
@@ -457,15 +462,15 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				self.events_cache.insert(0, value)
 
 		def remove_key(self, key):
-			if key == 'token_data_cache' and len(self.token_data_cache.keys())>=2000:
+			if key == 'token_data_cache' and len(self.token_data_cache.keys())>=10:
 				self.token_data_cache.pop(random.choice(self.token_data_cache.keys()))
-			elif key == 'coin_data_cache' and len(self.coin_data_cache.keys())>=2000:
+			elif key == 'coin_data_cache' and len(self.coin_data_cache.keys())>=10:
 				self.coin_data_cache.pop(random.choice(self.coin_data_cache.keys()))
-			elif key == 'functions_cache' and len(self.functions_cache.keys())>=2000:
+			elif key == 'functions_cache' and len(self.functions_cache.keys())>=10:
 				self.functions_cache.pop(random.choice(self.functions_cache.keys()))
-			elif key == 'contracts_cache' and len(self.contracts_cache.keys())>=2000:
+			elif key == 'contracts_cache' and len(self.contracts_cache.keys())>=10:
 				self.contracts_cache.pop(random.choice(self.contracts_cache.keys()))
-			elif key == 'events_cache' and len(self.events_cache)>=2000:
+			elif key == 'events_cache' and len(self.events_cache)>=10:
 				self.events_cache.pop()
 
 	adapter = requests.adapters.HTTPAdapter(pool_connections=30, pool_maxsize=30)
