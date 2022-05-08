@@ -23,7 +23,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.web3 = web3
 			self.web4 = web4
 			self.codec: ABICodec = web4.codec
-			self.blockTime = {}
 			self.event_queue = event_queue
 			self.zmq_queue = zmq_queue
 			self.query = self.load_query()
@@ -316,13 +315,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.logger.info('Starting Worker: {}'.format(thread))
 
 			while self.running:
-				if len(self.blockTime) > 100:
-					try:
-						del self.blockTime
-						self.blockTime = {}
-					except Exception as e:
-						self.logger.critical('Exception while attempting to reset blocktimes',exc_info=True)
-
 				try:
 					event = self.event_queue.get()
 					tx = event.transactionHash.hex()
@@ -344,12 +336,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						blockNumber = event['blockNumber']
 
 						retries = 0
-						while blockNumber not in self.blockTime:
+						while self.redis_cache.hget("Block" + blockNumber, "timestamp"):
 							try:
 								timestamp = self.web4.eth.getBlock(blockNumber)
 								if 'timestamp' in timestamp:
-									# self.blockTime[blockNumber] = timestamp['timestamp']
 									self.redis_cache.hmset("Block" + blockNumber, timestamp)
+
 							except Exception as e:
 								pass
 
@@ -361,6 +353,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						if retries > 10:
 							continue
 
+						
 						timestamp = self.redis_cache.hget("Block" + blockNumber, "timestamp")
 
 						try:
