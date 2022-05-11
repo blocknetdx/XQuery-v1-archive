@@ -12,6 +12,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 	import pickle5 as pickle
 	import random
 	import requests
+	import redis
 
 	class EventHandler:
 		def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue, global_vars):
@@ -22,7 +23,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.web3 = web3
 			self.web4 = web4
 			self.codec: ABICodec = web4.codec
-			self.blockTime = {}
 			self.event_queue = event_queue
 			self.zmq_queue = zmq_queue
 			self.query = self.load_query()
@@ -34,7 +34,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.event_type = self.get_event_topic()
 			self.get_latest_block()
 			self.start_block = self.load_start_block()
-			self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+			#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+			self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 			self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 			self.lock_forward = False
 			self.lock_backward = False
@@ -42,6 +43,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.back_running = True
 			self.running = True
 			self.errors = 0
+			self.redis_cache = redis.Redis()
 
 		def get_latest_block(self):
 			self.latest_block = int(self.web4.eth.block_number)-1
@@ -280,18 +282,22 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				if not self.lock_backward:
 					try:
 						if self.start_block != 'None':
-							if self.current_block>self.start_block:
+							#if self.current_block>self.start_block:
+							if self.current_block<self.latest_block:
 								self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
 								backward_filter = self.web2.eth.filter({
-										'fromBlock': hex(int(self.current_block)-1),
-										'toBlock': hex(int(self.current_block)),
+										#'fromBlock': hex(int(self.current_block)-1),
+										#'toBlock': hex(int(self.current_block)),
+										'fromBlock': hex(int(self.current_block)),
+ 										'toBlock': hex(int(self.current_block)+1)
 										'topics': [self.event_type]
 									})
 								for event in backward_filter.get_all_entries():
 									self.event_queue.put(event)
 								self.web2.eth.uninstall_filter(backward_filter.filter_id)
 								self.lock_backward = True
-								self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+								#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+								self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
 								self.global_vars.update_key('backblock_progress', self.current_block)
 								self.lock_backward = False
 						else:
@@ -309,13 +315,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.logger.info('Starting Worker: {}'.format(thread))
 
 			while self.running:
-				if len(self.blockTime) > 100:
-					try:
-						del self.blockTime
-						self.blockTime = {}
-					except Exception as e:
-						self.logger.critical('Exception while attempting to reset blocktimes',exc_info=True)
-
 				try:
 					event = self.event_queue.get()
 					tx = event.transactionHash.hex()
@@ -337,11 +336,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						blockNumber = event['blockNumber']
 
 						retries = 0
-						while blockNumber not in self.blockTime:
+						while self.redis_cache.hget("Block" + blockNumber, "timestamp"):
 							try:
 								timestamp = self.web4.eth.getBlock(blockNumber)
 								if 'timestamp' in timestamp:
-									self.blockTime[blockNumber] = timestamp['timestamp']
+									self.redis_cache.hmset("Block" + blockNumber, timestamp)
+
 							except Exception as e:
 								pass
 
@@ -353,7 +353,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						if retries > 10:
 							continue
 
-						timestamp = self.blockTime[blockNumber]
+						
+						timestamp = self.redis_cache.hget("Block" + blockNumber, "timestamp")
 
 						try:
 							#process event
