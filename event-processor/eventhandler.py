@@ -336,11 +336,11 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						blockNumber = event['blockNumber']
 
 						retries = 0
-						while self.redis_cache.hget("Block" + blockNumber, "timestamp"):
+						while self.redis_cache.hget("Block" + str(blockNumber), "timestamp"):
 							try:
 								timestamp = self.web4.eth.getBlock(blockNumber)
 								if 'timestamp' in timestamp:
-									self.redis_cache.hmset("Block" + blockNumber, timestamp)
+									self.redis_cache.hmset("Block" + str(blockNumber), timestamp)
 
 							except Exception as e:
 								pass
@@ -354,7 +354,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 							continue
 
 						
-						timestamp = self.redis_cache.hget("Block" + blockNumber, "timestamp")
+						timestamp = self.redis_cache.hget("Block" + str(blockNumber), "timestamp")
 
 						try:
 							#process event
