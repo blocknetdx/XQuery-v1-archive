@@ -289,7 +289,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 										#'fromBlock': hex(int(self.current_block)-1),
 										#'toBlock': hex(int(self.current_block)),
 										'fromBlock': hex(int(self.current_block)),
- 										'toBlock': hex(int(self.current_block)+1)
+ 										'toBlock': hex(int(self.current_block)+1),
 										'topics': [self.event_type]
 									})
 								for event in backward_filter.get_all_entries():
