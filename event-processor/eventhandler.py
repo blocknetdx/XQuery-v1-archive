@@ -15,9 +15,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 	import redis
 
 	class EventHandler:
-		def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue, global_vars):
+		def __init__(self, web2: Web3, web3: Web3, web4: Web3, zmq_queue, event_queue):
 			self.logger = logging.getLogger("EventHandler")
-			self.global_vars = global_vars
 			self.chain_name = os.environ.get('NAME','AVAX')
 			self.web2 = web2
 			self.web3 = web3
@@ -34,9 +33,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.event_type = self.get_event_topic()
 			self.get_latest_block()
 			self.start_block = self.load_start_block()
-			#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
-			self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
-			self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 			self.lock_forward = False
 			self.lock_backward = False
 			self.lock_queue = False
@@ -44,6 +40,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.running = True
 			self.errors = 0
 			self.redis_cache = redis.Redis()
+			self.current_block = self.redis_cache.get('backblock_progress') if self.redis_cache.exists('backblock_progress') else self.start_block
+			self.current_block_forward = self.redis_cache.get('forwardblock_progress') if self.redis_cache.exists('forwardblock_progress') else self.latest_block
 
 		def get_latest_block(self):
 			self.latest_block = int(self.web4.eth.block_number)-1
@@ -116,8 +114,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 
 		#get token details from address
 		def get_token_data(self, w3, address, abi):
-			if address in self.global_vars.return_key('coin_data_cache'):
-				return json.loads(pickle.loads(self.global_vars.return_key('coin_data_cache')[address]))
+			if self.redis_cache.exists('CoinCache-' + address):
+				return json.loads(pickle.loads(self.redis_cache.hgetall('CoinCache-' + address)))
 			else:
 				contract = w3.eth.contract(address=Web3.toChecksumAddress(address),abi=abi)
 				name = None
@@ -140,14 +138,14 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				"symbol": str(symbol) if symbol else None,
 				"decimals": int(decimals) if decimals else None
 				}
-				self.global_vars.remove_key('coin_data_cache')
-				self.global_vars.add_key('coin_data_cache', address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
+				self.redis_cache.delete('CoinCache-' + address)
+				self.redis_cache.hmset('CoinCache-' + address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
 				return d
 
 		#get pair details from contract address
 		def get_tokens_from_caddress(self, w3, contract_address, abi):
-			if contract_address in self.global_vars.return_key('token_data_cache'):
-				return json.loads(pickle.loads(self.global_vars.return_key('token_data_cache')[contract_address]))
+			if self.redis_cache.exists('TokenCache-' + contract_address):
+				return json.loads(pickle.loads(self.redis_cache.hgetall('TokenCache-' + contract_address)))
 			else:
 				contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address),abi=abi)
 				token0_address = contract.functions.token0().call()
@@ -158,8 +156,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 				'token0': token0,
 				'token1': token1
 				}
-				self.global_vars.remove_key('token_data_cache')
-				self.global_vars.add_key('token_data_cache', contract_address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
+				self.redis_cache.delete('TokenCache-' + contract_address)
+				self.redis_cache.hmset('TokenCache-' + contract_address, pickle.dumps(pickle.PickleBuffer(json.dumps(data,sort_keys=True,ensure_ascii=True).encode('UTF-8')), protocol=5))
 				return data
 
 		def get_address_filter(self, xquery_event):
@@ -175,12 +173,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			transaction = w3.eth.get_transaction(tx)
 			try:
 				pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
-				if pb in self.global_vars.return_key('functions_cache'):
-					contract_router = self.global_vars.return_key('functions_cache')[pb]
+				if self.redis_cache.exists('FunctionCache-' + pb):
+					contract_router = pickle.loads(self.redis_cache.get('FunctionCache-' + pb))
 				else:
 					contract_router = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)
-					self.global_vars.remove_key('functions_cache')
-					self.global_vars.add_key('functions_cache',pb,contract_router)
+					self.redis_cache.delete('FunctionCache-' + pb)
+					self.redis_cache.set('FunctionCache-' + pb, pickle.dumps(contract_router))
 
 				decoded_input = contract_router.decode_function_input(transaction.input)
 				func = decoded_input[0]
@@ -199,12 +197,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			xquery_event = {}
 			try:
 				pb = contract_address.encode('UTF-8') + json.dumps(abi,sort_keys=True,ensure_ascii=True).encode('UTF-8')
-				if pb in self.global_vars.return_key('contracts_cache'):
-					contract = self.global_vars.return_key('contracts_cache')[pb]
+				if self.redis_cache.exists('ContractCache-' + pb):
+					contract = pickle.loads(self.redis_cache.get('ContractCache-' + pb))
 				else:
-					contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)				
-					self.global_vars.remove_key('contracts_cache')
-					self.global_vars.add_key('contracts_cache', pb, contract)
+					contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=abi)	
+					self.redis_cache.delete('ContractCache-' + pb)
+					self.redis_cache.set('ContractCache-' + pb, pickle.dumps(contract))			
 				contract_call = getattr(contract,f'{event_type.lower()}s')
 				action_call = getattr(contract_call,event_name.lower().capitalize())
 				xquery_event = action_call().processLog(event)
@@ -264,7 +262,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						self.lock_forward = True
 						self.get_latest_block()
 						self.current_block_forward = self.current_block_forward + 1 if self.current_block_forward < self.latest_block else self.latest_block
-						self.global_vars.update_key('forwardblock_progress', self.current_block_forward)
+						self.redis_cache.set('forwardblock_progress', self.current_block_forward)
 						self.lock_forward = False
 						time.sleep(0.01)
 					except ValueError as e:
@@ -274,7 +272,6 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						self.errors += 0.2
 						if self.errors > 2:
 							self.running = False
-							self.global_vars.update_key('running', False)
 
 		def back_loop(self, thread):
 			self.logger.info(f'{thread} Starting back listener...')
@@ -298,7 +295,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 								self.lock_backward = True
 								#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
 								self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
-								self.global_vars.update_key('backblock_progress', self.current_block)
+								self.redis_cache.set('backblock_progress', self.current_block)
 								self.lock_backward = False
 						else:
 							self.back_running = False
@@ -323,12 +320,12 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 					main_topic = [x.hex() for x in event_topics][0] if len(event_topics)>0 else None
 					event_hash = hashlib.sha256(json.dumps(Web3.toJSON(event), sort_keys=True, ensure_ascii=True).encode('UTF-8')).hexdigest()
 
-					if main_topic in self.topics and event_hash not in self.global_vars.return_key('events_cache'):
+					if main_topic in self.topics and self.redis_cache.exists('EventCache-' + event_hash) == 0:
 						while self.lock_queue==True:
 							time.sleep(1)
 						self.lock_queue = True
-						self.global_vars.remove_key('events_cache')
-						self.global_vars.add_key('events_cache', event_hash, None)
+						self.redis_cache.delete('EventCache-' + event_hash)
+						self.redis_cache.set('EventCache-' + event_hash, None)
 						self.lock_queue = False
 						xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 						xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
@@ -336,11 +333,11 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 						blockNumber = event['blockNumber']
 
 						retries = 0
-						while self.redis_cache.hget("Block" + str(blockNumber), "timestamp"):
+						while self.redis_cache.hget("Block-" + str(blockNumber), "timestamp"):
 							try:
 								timestamp = self.web4.eth.getBlock(blockNumber)
 								if 'timestamp' in timestamp:
-									self.redis_cache.hmset("Block" + str(blockNumber), timestamp)
+									self.redis_cache.hmset("Block-" + str(blockNumber), timestamp)
 
 							except Exception as e:
 								pass
@@ -354,7 +351,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 							continue
 
 						
-						timestamp = self.redis_cache.hget("Block" + str(blockNumber), "timestamp")
+						timestamp = self.redis_cache.hget("Block-" + str(blockNumber), "timestamp")
 
 						try:
 							#process event
@@ -397,74 +394,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 					self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
 
 					self.running = False
-					self.global_vars.update_key('running', False)
 					self.errors += 1
-
-	class GlobalVars:
-		def __init__(self):
-			self.queue = False
-			self.running = True
-			self.backblock_progress = None
-			self.forwardblock_progress = None
-			self.token_data_cache = dict()
-			self.coin_data_cache = dict()
-			self.functions_cache = dict()
-			self.contracts_cache = dict()
-			self.events_cache = list()
-
-		def return_key(self, key):
-			if key == 'queue':
-				return self.queue
-			elif key == 'running':
-				return self.running
-			elif key == 'backblock_progress':
-				return self.backblock_progress
-			elif key == 'forwardblock_progress':
-				return self.forwardblock_progress
-			elif key == 'token_data_cache':
-				return self.token_data_cache
-			elif key == 'coin_data_cache':
-				return self.coin_data_cache
-			elif key == 'functions_cache':
-				return self.functions_cache
-			elif key == 'contracts_cache':
-				return self.contracts_cache
-			elif key == 'events_cache':
-				return self.events_cache
-
-		def update_key(self, key, value):
-			if key == 'queue':
-				self.queue = value
-			elif key == 'running':
-				self.running = value
-			elif key == 'backblock_progress':
-				self.backblock_progress = value
-			elif key == 'forwardblock_progress':
-				self.forwardblock_progress = value
-
-		def add_key(self, key, value, value1):
-			if key == 'token_data_cache':
-				self.token_data_cache[value] = value1
-			elif key == 'coin_data_cache':
-				self.coin_data_cache[value] = value1
-			elif key == 'functions_cache':
-				self.functions_cache[value] = value1
-			elif key == 'contracts_cache':
-				self.contracts_cache[value] = value1
-			elif key == 'events_cache':
-				self.events_cache.insert(0, value)
-
-		def remove_key(self, key):
-			if key == 'token_data_cache' and len(self.token_data_cache.keys())>=10:
-				self.token_data_cache.pop(random.choice(self.token_data_cache.keys()))
-			elif key == 'coin_data_cache' and len(self.coin_data_cache.keys())>=10:
-				self.coin_data_cache.pop(random.choice(self.coin_data_cache.keys()))
-			elif key == 'functions_cache' and len(self.functions_cache.keys())>=10:
-				self.functions_cache.pop(random.choice(self.functions_cache.keys()))
-			elif key == 'contracts_cache' and len(self.contracts_cache.keys())>=10:
-				self.contracts_cache.pop(random.choice(self.contracts_cache.keys()))
-			elif key == 'events_cache' and len(self.events_cache)>=10:
-				self.events_cache.pop()
 
 	adapter = requests.adapters.HTTPAdapter(pool_connections=30, pool_maxsize=30)
 	session = requests.Session()
@@ -480,8 +410,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 	w4 = Web3(Web3.HTTPProvider(f'{CHAIN_HOST}', session=session, request_kwargs={'timeout': 60}))
 	w4.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-	gv = GlobalVars()
-	event_handler = EventHandler(w2, w3, w4, zmq_queue, event_queue, gv)
+	event_handler = EventHandler(w2, w3, w4, zmq_queue, event_queue)
 
 	if event_type == 'forward':
 		event_handler.forward_loop(os.getpid())
