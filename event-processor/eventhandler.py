@@ -40,8 +40,8 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.running = True
 			self.errors = 0
 			self.redis_cache = redis.Redis(host='xquery-redis', password='Redis2022')
-			self.current_block = self.redis_cache.get('backblock_progress') if self.redis_cache.exists('backblock_progress') else self.start_block
-			self.current_block_forward = self.redis_cache.get('forwardblock_progress') if self.redis_cache.exists('forwardblock_progress') else self.latest_block
+			self.current_block = int.from_bytes(self.redis_cache.get('backblock_progress'), 'big') if self.redis_cache.exists('backblock_progress') else self.start_block
+			self.current_block_forward = int.from_bytes(self.redis_cache.get('forwardblock_progress'), 'big') if self.redis_cache.exists('forwardblock_progress') else self.latest_block
 
 		def get_latest_block(self):
 			self.latest_block = int(self.web4.eth.block_number)-1
@@ -325,7 +325,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 							time.sleep(1)
 						self.lock_queue = True
 						self.redis_cache.delete('EventCache-' + event_hash)
-						self.redis_cache.set('EventCache-' + event_hash, None)
+						self.redis_cache.set('EventCache-' + event_hash, 1)
 						self.lock_queue = False
 						xquery_type = [_type for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
 						xquery_name = [index_topic['name'] for _type in list(self.index_topics) for index_topic in self.index_topics[_type] if index_topic['topic'] == main_topic][0]
