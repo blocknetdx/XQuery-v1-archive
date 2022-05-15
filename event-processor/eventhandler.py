@@ -39,7 +39,7 @@ def start_process(zmq_queue, event_queue, CHAIN_HOST, event_type):
 			self.back_running = True
 			self.running = True
 			self.errors = 0
-			self.redis_cache = redis.Redis()
+			self.redis_cache = redis.Redis(host='xquery-redis', password='Redis2022')
 			self.current_block = self.redis_cache.get('backblock_progress') if self.redis_cache.exists('backblock_progress') else self.start_block
 			self.current_block_forward = self.redis_cache.get('forwardblock_progress') if self.redis_cache.exists('forwardblock_progress') else self.latest_block
 
