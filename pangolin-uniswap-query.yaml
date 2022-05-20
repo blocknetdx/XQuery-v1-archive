@@ -53,3 +53,26 @@ chains:
       address: '0xe592427a0aece92de3edee1f18e0157c05861564'
     historical:
     - fromBlock: "12369634"
+  - name: AVAX_TRADERJOE
+    rpc_host: https://api.avax.network/ext/bc/C/rpc
+    abi: abi/traderjoeRouter.json
+    query:
+      - name: Withdrawal
+      - name: Deposit
+      - name: Approval
+      - name: Burn
+      - name: Mint
+      - name: Swap
+      - name: Sync
+      - name: Transfer
+      - name: Approval
+      - name: Burn
+      - name: Mint
+      - name: Swap
+      - name: Sync
+      - name: Transfer
+    address:
+    - name: Traderjoe_Router
+      address: '0x60aE616a2155Ee3d9A68541Ba4544862310933d4'
+    historical:
+    - fromBlock: "57347"
