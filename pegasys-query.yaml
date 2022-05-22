@@ -1,7 +1,7 @@
-graph: SYS
+graph: NEVM
 endpoint: /indexer
 chains:
-  - name: SYS_PEGASYS
+  - name: NEVM_PEGASYS
     rpc_host: https://rpc.syscoin.org/
     abi: abi/pegasysRouter.json
     query:
