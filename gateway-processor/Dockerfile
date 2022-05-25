@@ -12,4 +12,4 @@ RUN apt-get install -y build-essential musl-dev gcc g++ libffi-dev libssl-dev py
     && rm -rf /usr/share/man \
     && rm -rf /tmp/*
 
-CMD sleep 15 && python3 /app/manager/main.py
+CMD sleep 15 && python3 /app/manager/gateway-processor.py

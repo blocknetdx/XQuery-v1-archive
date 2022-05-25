@@ -24,7 +24,7 @@ def load_schema():
 					order.append([j['name'],j['value']])
 	return order
 
-logger = logging.getLogger('main.py')
+logger = logging.getLogger('db-processor.py')
 
 
 @db_session

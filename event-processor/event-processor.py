@@ -24,7 +24,7 @@ backevent_queue = m.Queue()
 zmq_queue = m.Queue()
 
 def main():
-	logger = logging.getLogger('main.py')
+	logger = logging.getLogger('event-processor.py')
 	logger.info('Starting...')
 	logger.info('Initializing global_vars...')
 

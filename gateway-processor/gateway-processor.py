@@ -19,7 +19,7 @@ logging.basicConfig(
     style='{',
 )
 
-logger = logging.getLogger('main.py')
+logger = logging.getLogger('gateway-processor.py')
 
 def main():
     global frontend, backend, context, txs
