@@ -58,7 +58,7 @@ Best suitable to be used with [EXRPROXY-ENV](https://github.com/blocknetdx/exrpr
 - requires at least 2vCPU
 
 
-## <ins>query.yaml</ins> input file format <a name="0"></a>
+## <ins>query.yaml</ins> input file format (This .yaml file is auto-generated in Autobuild steps below.)<a name="0"></a>
 ```yaml
 #mandatory
 graph: Name of graph
@@ -83,113 +83,19 @@ chains:
     - fromBlock: Starting block number for historical events; Expected number
 ```
 ## Autobuild steps <a name="1"></a>
-### Use with [EXRPROXY-ENV](https://github.com/blocknetdx/exrproxy-env) repo 
 #### Requirements
-- `Docker`
-- `Docker-Compose`
-- `Servicenode Private Key`
 - `Port 80 must be opened on the host`
 
-#### 1. Manually edit your environment data
+Follow the [Service Node Setup Guide](https://docs.blocknet.co/service-nodes/setup/).
+That guide employs the autobuild tools in the [EXR ENV](https://github.com/blocknetdx/exrproxy-env) repo
+to deploy XQuery within an EXR Environment.
 
-```
-export PUBLIC_IP=""  # Update with your public ip address
-export SN_NAME="servicenode01"  # Update with your snode name
-export SN_KEY="servicenodeprivatekey"  # Update with your snode private key
-export SN_ADDRESS="servicenodekeyaddress"  # Update with your snode address
-export RPC_USER="user"
-export RPC_PASSWORD="password"
-docker-compose -f "docker-compose.yml" up -d --build
-```
+Once the XQuery stack has been deployed in the EXR ENV, you can create a project and test the XQuery
+deployment by following the [Project API](https://api.blocknet.co/#projects-api-xquery-hydra) and
+the [XQuery API](https://api.blocknet.co/#xquery-api).
 
-#### 2. Clone repo - using the command below you can clone this repo with XQuery submodule
-
-```
-git clone --recursive https://github.com/blocknetdx/exrproxy-env.git
-```
-
-```
-cd exrproxy-env
-```
-
-```
-git submodule update --init --recursive
-```
-
-#### 3. Input file - Edit your XQuery integration input file with your desired graph 
-
-Check for reference for local nodes:
-
-```
-autobuild/examples/xquery-gethINT-avaxINT.yaml
-```
-
-To use external connections check:
-
-```
-autobuild/examples/xquery-gethEXT-avaxEXT.yaml
-```
-
-#### 4. Change to autobuild directory
-
-```
-cd autobuild
-```
-
-#### 5. Install python requirements if not already installed
-```
-pip3 install -r requirements.txt
-```
-
-#### 6. Generate docker-compose stack
-
-```
-python app.py --yaml examples/xquery-gethINT-avaxINT.yaml
-```
-
-#### 7. Change to the root folder of the repo and move/copy the generated files
-
-```
-mv autobuild/dockercompose-custom.yaml docker-compose.yml
-mv autobuild/xquery.yaml xquery.yaml
-```
-
-#### 8. Build images
-
-```
-docker-compose build
-```
-
-#### 9. Deploy stack
-
-```
-docker-compose -f docker-compose.yml up -d --build
-```
-
-#### 10. Create project
-
-```
-curl http://127.0.0.1/xrs/projects \
-                    -X POST \
-                    -H "Content-Type: application/json" \
-                    -d '{"jsonrpc":"2.0","method":"request_project","params": [],"id":1}'
-```
-
-#### 11. With the api-key provided and after payment get your data
-
-```
-curl http://127.0.0.1/xrs/xquery/<PROJECT-ID>/help -X POST -H "Api-Key:<API-KEY>"
-```
-
-#### 12. Test XQuery via python code
-
-Check the python script in autobuild/xq.py
-
-```
-python3 exrproxy-env/autobuild/xq.py --projectid YOUR-PROJECT-ID --apikey YOUR-API-KEY
-```
-
-
+NOTE: If you want to create a project in the EXR ENV for testing, and you want to avoid making a payment to create the project,
+check out the `projects.py` tool in your EXR ENV, located at `exrproxy-env/cli/projects.py`. Issue `projects.py -h` for help in using it.
 
 # Templates <a name="templates"></a>
 ## Single chain <a name="single_chain"></a>

@@ -1,5 +1,6 @@
 #FROM nginx:1.15-alpine
-FROM openresty/openresty:alpine-fat
+#FROM openresty/openresty:alpine-fat
+FROM openresty/openresty:1.19.9.1-12-alpine-fat
 RUN mkdir -p /run/nginx
 RUN apk add --no-cache nginx-mod-http-lua coreutils
 RUN apk add python3 python3-dev py3-pip
