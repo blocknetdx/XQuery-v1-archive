@@ -1,113 +1,91 @@
-def start_zmq(zmq_queue):
-	import json
-	import os
-	import time
-	import uuid
-	import zmq
-	import logging
-	import time
-	from threading import Thread
+import json
+import os
+import time
+import uuid
+import zmq
+import logging
 
-	class PingHandler(Thread):
-	    def __init__(self, zmq_handler):
-	        super().__init__()
+class ZMQ:
+	def __init__(self, queue):
+		self.logger = logging.getLogger("ZMQ")
+		self.context = zmq.Context()
+		self.socket = self.context.socket(zmq.PUSH)
+		self.socket.setsockopt(zmq.LINGER, 0)
+		self.sub_socket = self.context.socket(zmq.PULL)
 
-	        self.zmq_handler = zmq_handler
-	        self.running = False
-	        self.errors = 0
+		self.logger.info('Connecting...')
 
-	    def run(self):
-	        while self.running:
-	            self.zmq_handler.ping()
-	            time.sleep(15)
+		self.sub_socket.connect("tcp://{}:{}".format(
+			os.environ.get('ZMQ_GATEWAY_HOST', 'gateway-processor'), os.environ.get('ZMQ_GATEWAY_PORT1', 5555)
+		))
 
-	class ZMQ:
-		def __init__(self, queue):
-			self.logger = logging.getLogger("ZMQ")
-			self.context = zmq.Context()
-			self.socket = self.context.socket(zmq.PUSH)
-			self.socket.setsockopt(zmq.LINGER, 0)
-			self.sub_socket = self.context.socket(zmq.PULL)
+		self.socket.connect("tcp://{}:{}".format(
+			os.environ.get('ZMQ_GATEWAY_HOST', 'gateway-processor'),
+			os.environ.get('ZMQ_GATEWAY_PORT2', 5556)))
 
-			self.logger.info('Connecting...')
+		self.exchange = os.environ.get('EXCHANGE', 'AVAX')
+		self.id = uuid.uuid4().hex
+		self.queue = queue
 
-			self.sub_socket.connect("tcp://{}:{}".format(
-				os.environ.get('ZMQ_GATEWAY_HOST', 'gateway-processor'), os.environ.get('ZMQ_GATEWAY_PORT1', 5555)
-			))
+	def init(self):
+		try:
+			self.logger.info('Initializing Connection')
 
-			self.socket.connect("tcp://{}:{}".format(
-				os.environ.get('ZMQ_GATEWAY_HOST', 'gateway-processor'),
-				os.environ.get('ZMQ_GATEWAY_PORT2', 5556)))
+			time.sleep(1)
 
-			self.exchange = os.environ.get('EXCHANGE', 'AVAX')
-			self.id = uuid.uuid4().hex
-			self.queue = queue
-
-		def init(self):
-			try:
-				self.logger.info('Initializing Connection')
-
-				time.sleep(1)
-
-				connect_data = {
-					'topic': 'connect',
-					'data': {
-						'id': self.id,
-					}
+			connect_data = {
+				'topic': 'connect',
+				'data': {
+					'id': self.id,
 				}
-				self.logger.info('Trying Connection', connect_data)
+			}
+			self.logger.info('Trying Connection', connect_data)
 
-				self.socket.send_json(connect_data)
+			self.socket.send_json(connect_data)
 
+		except Exception as e:
+			self.logger.critical('ZMQ HANDLER', exc_info=True)
+
+	def ping(self):
+		connect_data = {
+			'topic': 'ping',
+			'data': {
+				'id': self.id,
+			}
+		}
+
+		self.logger.info('Ping', connect_data)
+
+		try:
+			self.socket.send_json(connect_data)
+		except Exception as e:
+			self.logger.critical(e,exc_info=true)
+
+	def disconnect(self):
+		connect_data = {
+			'topic': 'disconnect',
+			'data': {
+				'id': self.id,
+			}
+		}
+
+		self.logger.info('Disconnecting', connect_data)
+
+		try:
+			self.socket.send_json(connect_data)
+		except Exception as e:
+			self.logger.critical(e,exc_info=True)
+
+	def send_trades(self):
+		while True:
+			try:
+				events = self.queue.get()
+
+				self.socket.send_json({
+					'topic': 'trades',
+					'data': events
+				})
+
+				self.queue.task_done()
 			except Exception as e:
 				self.logger.critical('ZMQ HANDLER', exc_info=True)
-
-		def ping(self):
-			connect_data = {
-				'topic': 'ping',
-				'data': {
-					'id': self.id,
-				}
-			}
-
-			self.logger.info('Ping', connect_data)
-
-			try:
-				self.socket.send_json(connect_data)
-			except Exception as e:
-				self.logger.critical(e,exc_info=true)
-
-		def disconnect(self):
-			connect_data = {
-				'topic': 'disconnect',
-				'data': {
-					'id': self.id,
-				}
-			}
-
-			self.logger.info('Disconnecting', connect_data)
-
-			try:
-				self.socket.send_json(connect_data)
-			except Exception as e:
-				self.logger.critical(e,exc_info=True)
-
-		def send_trades(self):
-			while True:
-				try:
-					events = self.queue.get()
-
-					self.socket.send_json({
-						'topic': 'trades',
-						'data': events
-					})
-
-					self.queue.task_done()
-				except Exception as e:
-					self.logger.critical('ZMQ HANDLER', exc_info=True)
-
-	zmq_handler = ZMQ(zmq_queue)
-	ping_handler = PingHandler(zmq_handler)
-	zmq_handler.init()
-	ping_handler.start()
-	zmq_handler.send_trades()

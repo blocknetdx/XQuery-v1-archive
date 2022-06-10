@@ -13,6 +13,12 @@ chains:
       - name: Swap
       - name: Sync
       - name: Transfer
+      - name: Approval
+      - name: Burn
+      - name: Mint
+      - name: Swap
+      - name: Sync
+      - name: Transfer
     address:
     - name: Pegasys_Router
       address: '0x017dAd2578372CAEE5c6CddfE35eEDB3728544C4'
