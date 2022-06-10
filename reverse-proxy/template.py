@@ -1,3 +1,4 @@
+import requests
 import os
 import json
 import yaml
@@ -94,15 +95,29 @@ type xquery {{
 """.format(text=text)
 	write_text_file(final_text, "examples/schema.txt")
 	print(final_text)
+
+def externalIP():
+        try:
+                req = requests.get('http://checkip.amazonaws.com')
+                req = req.text
+                return req[:-1]
+        except Exception as e:
+                print(e)
+                return '<NODE-URL>'
 	
 def help_text(query, data):
 	port = os.environ.get('PORT', '80')
 	endpoint = query['endpoint']
+	ip = externalIP()
 	text = "Powered by\n\thttps://blocknet.co\n\thttps://xquery.io\n\n"
-	text +="Current Graph\n\t"+ f"http://localhost:{port}/help/graph\n\n"
-	text +="List available endpoints\n\t"+ f"http://localhost:{port}/help\n\n"
-	text +="GraphQL endpoint\n\t"+ f"http://localhost:{port}{endpoint}/\n\n"
-	text +="GraphQL data types\n\t"+ f"http://localhost:{port}/help/schema\n\n"
+	text +="List available endpoints\n\t"+ f"http://localhost:{port}/help\n\t"
+	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help\n\n"
+	text +="Current Graph\n\t"+ f"http://localhost:{port}/help/graph\n\t"
+	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help/graph | jq\n\n"
+	text +="GraphQL data types\n\t"+ f"http://localhost:{port}/help/schema\n\t"
+	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help/schema\n\n"
+	text +="GraphQL endpoint\n\t"+ f"http://localhost:{port}{endpoint}/\n\t"
+	text +="e.g. See https://api.blocknet.co/#indexer-example\n\n"
 	write_text_file(text, f"examples/help.txt")
 	data = dict(query)
 	for key, item in data.items():
@@ -134,4 +149,4 @@ if __name__ == "__main__":
 	final_data = gen_data_for_template(abis_dict)
 	process_template(final_data)
 
-	
+
