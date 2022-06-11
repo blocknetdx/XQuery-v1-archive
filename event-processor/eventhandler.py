@@ -31,6 +31,8 @@ class EventHandler:
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
 		self.start_block = self.load_start_block()
+		#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
+		self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 		self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 		self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 		self.lock_forward = False
@@ -268,17 +270,21 @@ class EventHandler:
 			if not self.lock_backward:
 				try:
 					if self.start_block != 'None':
-						if self.current_block>self.start_block:
+						#if self.current_block>self.start_block:
+						if self.current_block<self.latest_block:
 							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
 							backward_filter = self.web2.eth.filter({
-									'fromBlock': hex(int(self.current_block)-1),
-									'toBlock': hex(int(self.current_block))
+									#'fromBlock': hex(int(self.current_block)-1),
+									#'toBlock': hex(int(self.current_block))
+									'fromBlock': hex(int(self.current_block)),
+									'toBlock': hex(int(self.current_block)+1)
 								})
 							for event in backward_filter.get_all_entries():
 								self.event_queue.put(event)
 							self.web2.eth.uninstall_filter(backward_filter.filter_id)
 							self.lock_backward = True
-							self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+							#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+							self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
 							self.global_vars.update_key('backblock_progress', self.current_block)
 							self.lock_backward = False
 					else:
