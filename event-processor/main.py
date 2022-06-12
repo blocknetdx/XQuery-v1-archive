@@ -129,10 +129,11 @@ def main():
 					for i in range(0, cpus-1):
 						if i in [0]:
 							futures.append(executor.submit(start_process, zmq_queue, event_queue, CHAIN_HOST, 'forward', gv))
-						elif i in [1]:
-							futures.append(executor.submit(start_process, zmq_queue, backevent_queue, CHAIN_HOST, 'backward', gv))	
-						elif i in list(range(int((cpus - 3)/2),int(cpus))):
-							futures.append(executor.submit(start_process, zmq_queue, backevent_queue, CHAIN_HOST, 'process', gv))
+#						elif i in [1]:
+#							futures.append(executor.submit(start_process, zmq_queue, backevent_queue, CHAIN_HOST, 'backward', gv))	
+#						wtf was the purpose of the following elif??? Seems like a no-op to me, given the following else clause
+#						elif i in list(range(int((cpus - 3)/2),int(cpus))):
+#							futures.append(executor.submit(start_process, zmq_queue, backevent_queue, CHAIN_HOST, 'process', gv))
 						else:
 							futures.append(executor.submit(start_process, zmq_queue, event_queue, CHAIN_HOST, 'process', gv))	
 					while gv.return_key('running'):

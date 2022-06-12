@@ -34,7 +34,8 @@ class EventHandler:
 		#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 		self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 		self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
-		self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
+		#self.current_block_forward = self.latest_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
+		self.current_block_forward = self.start_block if self.global_vars.return_key('forwardblock_progress') == None else self.global_vars.return_key('forwardblock_progress')
 		self.lock_forward = False
 		self.lock_backward = False
 		self.lock_queue = False
