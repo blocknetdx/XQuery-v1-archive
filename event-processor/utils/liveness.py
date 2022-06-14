@@ -25,3 +25,18 @@ def avax_live(HOST):
 			return False
 	except Exception as e:
 		return False
+
+def nevm_live(HOST):
+	try:
+		payload = {'jsonrpc': '2.0', 'method': 'eth_blockNumber', 'params': [], 'id': 1}
+		headers = {'Content-Type':'application/json'}
+		resp = requests.post(HOST,headers=headers,json=payload)
+		data = resp.json()
+		if data['result'] < hex(107659):  # 107659 is the NEVM block number now. (Little hack)
+			return False
+		else:
+			return True
+	except Exception as e:
+		return False
+
+
