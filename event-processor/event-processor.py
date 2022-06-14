@@ -111,7 +111,7 @@ def main():
 			elif 'AVAX' in CHAIN_NAME:
 				live = avax_live(CHAIN_HOST)
 			elif 'NEVM' in CHAIN_NAME:
-				live = eth_live(CHAIN_HOST)
+				live = nevm_live(CHAIN_HOST)
 			if live == False:
 				logger.info(f'{CHAIN_NAME} node syncing... Retrying in 30 seconds')
 				time.sleep(30)
@@ -129,6 +129,7 @@ def main():
 					for i in range(0, cpus-1):
 						if i in [0]:
 							futures.append(executor.submit(start_process, zmq_queue, event_queue, CHAIN_HOST, 'forward', gv))
+                                                # not using backward processing atm...
 #						elif i in [1]:
 #							futures.append(executor.submit(start_process, zmq_queue, backevent_queue, CHAIN_HOST, 'backward', gv))	
 #						wtf was the purpose of the following elif??? Seems like a no-op to me, given the following else clause
