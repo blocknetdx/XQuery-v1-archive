@@ -30,6 +30,7 @@ class EventHandler:
 		self.topics = self.get_topics_for_query()
 		self.address = self.get_address_filter_input()
 		self.get_latest_block()
+		self.initial_latest_block = self.latest_block
 		self.start_block = self.load_start_block()
 		#self.current_block = self.latest_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
 		self.current_block = self.start_block if self.global_vars.return_key('backblock_progress') == None else self.global_vars.return_key('backblock_progress')
@@ -238,6 +239,7 @@ class EventHandler:
 	#listen loop for incoming events | backward listner
 	def forward_loop(self, thread):
 		self.logger.info(f'{thread} Starting forward listener...')
+		SLEEP_TIME_BEFORE_INDEXING_NEXT_BLOCK = 0.01  # This variable is used to reduce CPU load after old blocks are indexed
 		
 		while self.running and self.errors < 2:
 			if not self.lock_forward:
@@ -251,11 +253,14 @@ class EventHandler:
 						self.event_queue.put(event)
 					self.web2.eth.uninstall_filter(forward_filter.filter_id)
 					self.lock_forward = True
-					self.get_latest_block()
+					if self.current_block_forward >= self.initial_latest_block: # This if condition will allow faster indexing of old blocks
+						self.get_latest_block()
+						if self.current_block_forward >= self.latest_block:
+							SLEEP_TIME_BEFORE_INDEXING_NEXT_BLOCK = 0.5
 					self.current_block_forward = self.current_block_forward + 1 if self.current_block_forward < self.latest_block else self.latest_block
 					self.global_vars.update_key('forwardblock_progress', self.current_block_forward)
 					self.lock_forward = False
-					time.sleep(0.01)
+					time.sleep(SLEEP_TIME_BEFORE_INDEXING_NEXT_BLOCK)
 				except ValueError as e:
 					self.logger.critical('ValueError in Listener loop!',exc_info=True)
 				except Exception as e:
@@ -265,39 +270,39 @@ class EventHandler:
 						self.running = False
 						self.global_vars.update_key('running', False)
 
-	def back_loop(self, thread):
-		self.logger.info(f'{thread} Starting back listener...')
-		while self.back_running and self.errors < 2:
-			if not self.lock_backward:
-				try:
-					if self.start_block != 'None':
-						#if self.current_block>self.start_block:
-						if self.current_block<self.latest_block:
-							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
-							backward_filter = self.web2.eth.filter({
-									#'fromBlock': hex(int(self.current_block)-1),
-									#'toBlock': hex(int(self.current_block))
-									'fromBlock': hex(int(self.current_block)),
-									'toBlock': hex(int(self.current_block)+1)
-								})
-							for event in backward_filter.get_all_entries():
-								self.event_queue.put(event)
-							self.web2.eth.uninstall_filter(backward_filter.filter_id)
-							self.lock_backward = True
-							#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
-							self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
-							self.global_vars.update_key('backblock_progress', self.current_block)
-							self.lock_backward = False
-					else:
-						self.back_running = False
-					time.sleep(0.01)
-				except ValueError as e:
-					self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
-				except Exception as e:
-					self.logger.critical('Exception in Back Listener loop!',exc_info=True)
-					self.errors += 0.2
-					if self.errors > 2:
-						self.back_running = False
+#	def back_loop(self, thread):
+#		self.logger.info(f'{thread} Starting back listener...')
+#		while self.back_running and self.errors < 2:
+#			if not self.lock_backward:
+#				try:
+#					if self.start_block != 'None':
+#						#if self.current_block>self.start_block:
+#						if self.current_block<self.latest_block:
+#							self.logger.info(f'{thread} {self.chain_name} {self.current_block} BACKWARD')
+#							backward_filter = self.web2.eth.filter({
+#									#'fromBlock': hex(int(self.current_block)-1),
+#									#'toBlock': hex(int(self.current_block))
+#									'fromBlock': hex(int(self.current_block)),
+#									'toBlock': hex(int(self.current_block)+1)
+#								})
+#							for event in backward_filter.get_all_entries():
+#								self.event_queue.put(event)
+#							self.web2.eth.uninstall_filter(backward_filter.filter_id)
+#							self.lock_backward = True
+#							#self.current_block = self.current_block - 1 if self.current_block > self.start_block else self.start_block
+#							self.current_block = self.current_block + 1 if self.current_block < self.latest_block else self.latest_block
+#							self.global_vars.update_key('backblock_progress', self.current_block)
+#							self.lock_backward = False
+#					else:
+#						self.back_running = False
+#					time.sleep(0.01)
+#				except ValueError as e:
+#					self.logger.critical('ValueError in Back Listener loop!',exc_info=True)
+#				except Exception as e:
+#					self.logger.critical('Exception in Back Listener loop!',exc_info=True)
+#					self.errors += 0.2
+#					if self.errors > 2:
+#						self.back_running = False
 
 	def queue_handler(self, thread):
 		self.logger.info('Starting Worker: {}'.format(thread))
