@@ -384,8 +384,10 @@ class EventHandler:
 						#add to db only if event belongs to a router
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
-							self.logger.info(f"{thread} SUCCESS QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
 							self.zmq_queue.put([xquery_event])
+							self.logger.info(f"{thread} POSTED QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
+						else:
+							self.logger.info(f"{thread} SKIPPED:{xquery_name} TX:{tx}")
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
 				self.event_queue.task_done()
