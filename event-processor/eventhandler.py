@@ -265,8 +265,12 @@ class EventHandler:
 					self.logger.critical('Exception in Listener loop!',exc_info=True)
 					self.errors += 0.2
 					if self.errors > 2:
+						self.logger.warning('Too many errors, disabling forward loop!')
 						self.running = False
 						self.global_vars.update_key('running', False)
+			self.logger.warning('Forward loop locked!')
+		self.logger.critical('Forward loop terminated!')
+
 
 #	def back_loop(self, thread):
 #		self.logger.info(f'{thread} Starting back listener...')
@@ -307,6 +311,7 @@ class EventHandler:
 
 		while self.running:
 			if len(self.blockTime) > 100:
+				self.logger.info('Resetting block times')
 				try:
 					del self.blockTime
 					self.blockTime = {}
@@ -385,15 +390,15 @@ class EventHandler:
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.zmq_queue.put([xquery_event])
-							self.logger.info(f"{thread} POSTED QUERY:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
+							self.logger.info(f"{thread} ACCEPTED:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
 						else:
 							self.logger.info(f"{thread} SKIPPED:{xquery_name} TX:{tx}")
 					except Exception as e:
 						self.logger.critical(f"Exception Worker {thread} Type: {xquery_type} Name: {xquery_name} TX: {tx}",exc_info=True)
 				self.event_queue.task_done()
 			except Exception as e:
-				self.logger.critical(f'Exception in worker: {thread}',exc_info=True)
-
+				self.logger.critical(f'Disabling thread due to Exception in worker: {thread}',exc_info=True)
 				self.running = False
 				self.global_vars.update_key('running', False)
 				self.errors += 1
+		self.logger.critical(f'Worker thread {thread} terminating')
