@@ -390,7 +390,7 @@ class EventHandler:
 						if 'address_filter' in list(xquery_event):
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.zmq_queue.put([xquery_event])
-							self.logger.info(f"{thread} ACCEPTED:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
+							self.logger.info(f"{thread} QUEUED:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
 						else:
 							self.logger.info(f"{thread} SKIPPED:{xquery_name} TX:{tx}")
 					except Exception as e:
