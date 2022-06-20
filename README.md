@@ -3,20 +3,21 @@
 Powered by    [Blocknet](https://blocknet.co) and  [XQuery](https://xquery.io/)
 
 # Indexer - [EXRPROXY-ENV](https://github.com/blocknetdx/exrproxy-env) plugin
-- [Indexer](#indexer)
-  * [Requirements](#requirements)
-  * [Dependency Installation](#dependency-installation)
-      - [Install Docker (Ubuntu)](#install-docker--ubuntu-)
- - [Automated Deployment with EXRPROXY-ENV](#automated-deployment)
-  * [Input file format](#0)
-  * [Autobuild steps](#1)
- - [Templates](#templates)  
-  * [Single Chain](#single_chain)
-    1. [pangolin-query.yaml](#avax_query)
-    2. [uniswap-query.yaml](#eth_query)
-    3. [pegasys-query.yaml](#nevm_query)
-  * [Multi Chain](#multi_chain)
-    1. [pangolin-uniswap-pegasys-query.yaml](#multi_query)
+- [Indexer - EXRPROXY-ENV plugin](#indexer---exrproxy-env-plugin)
+  - [Requirements <a name="requirements"></a>](#requirements-)
+  - [Dependency Installation <a name="dependency-installation"></a>](#dependency-installation-)
+      - [Install Docker (Ubuntu) <a name="install-docker--ubuntu-"></a>](#install-docker-ubuntu-)
+- [Automated Deployment with EXRPROXY-ENV <a name="automated-deployment"></a>](#automated-deployment-with-exrproxy-env-)
+  - [<ins>query.yaml</ins> input file format (This .yaml file is auto-generated in Autobuild steps below.)<a name="0"></a>](#insqueryyamlins-input-file-format-this-yaml-file-is-auto-generated-in-autobuild-steps-below)
+  - [Autobuild steps <a name="1"></a>](#autobuild-steps-)
+      - [Requirements](#requirements)
+- [Templates <a name="templates"></a>](#templates-)
+  - [Single chain <a name="single_chain"></a>](#single-chain-)
+    - [pangolin-query.yaml <a name="avax_query"></a>](#pangolin-queryyaml-)
+    - [uniswap-query.yaml <a name="eth_query"></a>](#uniswap-queryyaml-)
+    - [pegasys-query.yaml <a name="nevm_query"></a>](#pegasys-queryyaml-)
+  - [Multi chain <a name="multi_chain"></a>](#multi-chain-)
+    - [pangolin-uniswap-pegasys-query.yaml <a name="multi_query"></a>](#pangolin-uniswap-pegasys-queryyaml-)
 
  - [Help](#help)  
 
@@ -159,7 +160,7 @@ chains:
     - name: Pegasys_Router
       address: '0x017dAd2578372CAEE5c6CddfE35eEDB3728544C4'
     historical:
-    - fromBlock: "1"
+    - fromBlock: "38202"
 ```
   
 ## Multi chain <a name="multi_chain"></a>
@@ -207,6 +208,6 @@ chains:
     - name: Pegasys_Router
       address: '0x017dAd2578372CAEE5c6CddfE35eEDB3728544C4'
     historical:
-    - fromBlock: "1"
+    - fromBlock: "38202"
 
 ```
