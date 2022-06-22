@@ -382,7 +382,8 @@ class EventHandler:
 							xquery_event[f'{k}'] = v
 
 						#add to db only if event belongs to a router
-						if 'address_filter' in list(xquery_event):
+#						if 'address_filter' in list(xquery_event):
+                        if True:
 							xquery_event['xhash'] = hashlib.sha256(json.dumps(xquery_event, sort_keys=False, ensure_ascii=True).encode('UTF-8')).hexdigest()
 							self.zmq_queue.put([xquery_event])
 							self.logger.info(f"{thread} QUEUED:{xquery_name} XHASH:{xquery_event['xhash']} TX:{tx}")
