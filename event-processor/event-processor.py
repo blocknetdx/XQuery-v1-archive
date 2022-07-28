@@ -95,7 +95,7 @@ def start_zmq(zmq_queue):
 	zmq_handler.send_trades()
 
 def main():
-	logger = logging.getLogger('main.py')
+	logger = logging.getLogger('event-processor.py')
 	logger.info('Starting...')
 	logger.info('Initializing global_vars...')
 

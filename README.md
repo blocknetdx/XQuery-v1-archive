@@ -3,19 +3,21 @@
 Powered by    [Blocknet](https://blocknet.co) and  [XQuery](https://xquery.io/)
 
 # Indexer - [EXRPROXY-ENV](https://github.com/blocknetdx/exrproxy-env) plugin
-- [Indexer](#indexer)
-  * [Requirements](#requirements)
-  * [Dependency Installation](#dependency-installation)
-      - [Install Docker (Ubuntu)](#install-docker--ubuntu-)
- - [Automated Deployment with EXRPROXY-ENV](#automated-deployment)
-  * [Input file format](#0)
-  * [Autobuild steps](#1)
- - [Templates](#templates)  
-  * [Single Chain](#single_chain)
-    1. [avax_query.yaml](#avax_query)
-    2. [eth_query.yaml](#eth_query)
-  * [Multi Chain](#multi_chain)
-    1. [avax-eth-query.yaml](#multi_query)
+- [Indexer - EXRPROXY-ENV plugin](#indexer---exrproxy-env-plugin)
+  - [Requirements <a name="requirements"></a>](#requirements-)
+  - [Dependency Installation <a name="dependency-installation"></a>](#dependency-installation-)
+      - [Install Docker (Ubuntu) <a name="install-docker--ubuntu-"></a>](#install-docker-ubuntu-)
+- [Automated Deployment with EXRPROXY-ENV <a name="automated-deployment"></a>](#automated-deployment-with-exrproxy-env-)
+  - [<ins>query.yaml</ins> input file format (This .yaml file is auto-generated in Autobuild steps below.)<a name="0"></a>](#insqueryyamlins-input-file-format-this-yaml-file-is-auto-generated-in-autobuild-steps-below)
+  - [Autobuild steps <a name="1"></a>](#autobuild-steps-)
+      - [Requirements](#requirements)
+- [Templates <a name="templates"></a>](#templates-)
+  - [Single chain <a name="single_chain"></a>](#single-chain-)
+    - [pangolin-query.yaml <a name="avax_query"></a>](#pangolin-queryyaml-)
+    - [uniswap-query.yaml <a name="eth_query"></a>](#uniswap-queryyaml-)
+    - [pegasys-query.yaml <a name="nevm_query"></a>](#pegasys-queryyaml-)
+  - [Multi chain <a name="multi_chain"></a>](#multi-chain-)
+    - [pangolin-uniswap-pegasys-query.yaml <a name="multi_query"></a>](#pangolin-uniswap-pegasys-queryyaml-)
 
  - [Help](#help)  
 
@@ -79,7 +81,7 @@ chains:
       address: Router address
     #not mandatory
     historical:
-  - fromBlock: Starting block number for historical events; Expected number
+    - fromBlock: Starting block number for historical events; Expected number
 ```
 ## Autobuild steps <a name="1"></a>
 #### Requirements
@@ -98,7 +100,7 @@ check out the `projects.py` tool in your EXR ENV, located at `exrproxy-env/cli/p
 
 # Templates <a name="templates"></a>
 ## Single chain <a name="single_chain"></a>
-### avax-query.yaml <a name="avax_query"></a>
+### pangolin-query.yaml <a name="avax_query"></a>
 ```yaml
 # Single chain - AVAX
 graph: AVAX
@@ -116,7 +118,7 @@ chains:
     - fromBlock: "6800000"
 ```
 
-### eth-query.yaml <a name="eth_query"></a>
+### uniswap-query.yaml <a name="eth_query"></a>
 ```yaml
 #Single chain - ETH - infura
 graph: ETH
@@ -136,12 +138,36 @@ chains:
     - fromBlock: "13600000"
 ```
 
+### pegasys-query.yaml <a name="nevm_query"></a>
+```yaml
+#Single chain - NEVM - pegasys
+graph: NEVM
+endpoint: /indexer
+chains:
+  - name: NEVM_PEGASYS
+    rpc_host: https://rpc.syscoin.org/
+    abi: abi/pegasysRouter.json
+    query:
+      - name: Withdrawal
+      - name: Deposit
+      - name: Approval
+      - name: Burn
+      - name: Mint
+      - name: Swap
+      - name: Sync
+      - name: Transfer
+    address:
+    - name: Pegasys_Router
+      address: '0x017dAd2578372CAEE5c6CddfE35eEDB3728544C4'
+    historical:
+    - fromBlock: "38202"
+```
   
 ## Multi chain <a name="multi_chain"></a>
-  ### avax-eth-query.yaml <a name="multi_query"></a>
+  ### pangolin-uniswap-pegasys-query.yaml <a name="multi_query"></a>
 ```yaml
-#Multi chain AVAX - ETH
-graph: AVAX_ETH
+#Multi chain AVAX - ETH - NEVM
+graph: AVAX_ETH_NEVM
 endpoint: /indexer
 chains:
   - name: AVAX_PANGOLIN
@@ -166,5 +192,22 @@ chains:
       address: '0xe592427a0aece92de3edee1f18e0157c05861564'
     historical:
     - fromBlock: "13600000"
-```
+  - name: NEVM_PEGASYS
+    rpc_host: https://rpc.syscoin.org/
+    abi: abi/pegasysRouter.json
+    query:
+      - name: Withdrawal
+      - name: Deposit
+      - name: Approval
+      - name: Burn
+      - name: Mint
+      - name: Swap
+      - name: Sync
+      - name: Transfer
+    address:
+    - name: Pegasys_Router
+      address: '0x017dAd2578372CAEE5c6CddfE35eEDB3728544C4'
+    historical:
+    - fromBlock: "38202"
 
+```

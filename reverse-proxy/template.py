@@ -113,7 +113,7 @@ def help_text(query, data):
 	text +="List available endpoints\n\t"+ f"http://localhost:{port}/help\n\t"
 	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help\n\n"
 	text +="Current Graph\n\t"+ f"http://localhost:{port}/help/graph\n\t"
-	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help/graph | jq\n\n"
+	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help/graph\n\n"
 	text +="GraphQL data types\n\t"+ f"http://localhost:{port}/help/schema\n\t"
 	text +=f"e.g. curl -X POST http://{ip}/xrs/xquery/<PROJECT-ID>/help/schema\n\n"
 	text +="GraphQL endpoint\n\t"+ f"http://localhost:{port}{endpoint}/\n\t"
